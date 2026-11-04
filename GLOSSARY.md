@@ -37,3 +37,17 @@ _Avoid_: Appointment, meeting, session
 **Note**:
 A free-form page you write yourself, which may belong to a Subject and link to any other item.
 _Avoid_: Page, document
+
+## Offline
+
+**Pin**:
+A per-device choice to keep a Subject, Project or Resource available offline on that device. It covers everything beneath it, and the nearest choice wins, so a single Resource can be excluded from a pinned Subject.
+_Avoid_: Download, sync, cache, favourite
+
+**Offline copy**:
+The contents of a Resource stored on one device because a Pin covers it.
+_Avoid_: Download, cached file, local file
+
+**Conflict**:
+A file Resource that holds two or more competing contents, because it was changed or deleted elsewhere after the change was started. It lasts until the owner chooses what to keep.
+_Avoid_: Merge, clash, duplicate
