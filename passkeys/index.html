@@ -1,0 +1,304 @@
+<!doctype html>
+<!-- Throwaway test page for the wayfinder ticket "Do passkeys and sessions hold up on real devices?". Not part of Chronos. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Passkey Test</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Passkey Test">
+<style>
+  :root { color-scheme: light dark; --line: #8884; --accent: #4f46e5; }
+  * { box-sizing: border-box; }
+  body { margin: 0 auto; max-width: 640px; font: 16px/1.45 system-ui, sans-serif;
+         padding: max(16px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom)); }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 0 0 4px; }
+  p { margin: 0 0 10px; }
+  section { border-top: 1px solid var(--line); padding: 14px 0; }
+  .context { font-weight: 600; color: var(--accent); overflow-wrap: anywhere; }
+  .hint { font-size: 14px; opacity: .75; }
+  button, input, textarea { font: inherit; border-radius: 10px; border: 1px solid var(--line); padding: 10px 12px; }
+  button { background: var(--accent); color: #fff; border: 0; margin: 0 6px 8px 0; min-height: 44px; }
+  button.quiet { background: transparent; color: inherit; border: 1px solid var(--line); }
+  button:disabled { opacity: .4; }
+  input { width: 100%; margin-bottom: 8px; background: transparent; color: inherit; }
+  textarea { width: 100%; height: 260px; font: 12px/1.4 ui-monospace, Consolas, monospace; background: transparent; color: inherit; }
+  code { overflow-wrap: anywhere; }
+  #last { font: 13px/1.4 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .ok { color: #16a34a; } .bad { color: #dc2626; }
+</style>
+</head>
+<body>
+<h1>Passkey test</h1>
+<p class="hint">Throwaway page for Chronos. It has no server, so nothing leaves this device unless you copy it.</p>
+<p>This window is <span class="context" id="context"></span></p>
+<p id="last" aria-live="polite"></p>
+
+<section>
+  <h2>Passkeys</h2>
+  <p class="hint">Register makes a new passkey named after this window. Sign in lets you pick any passkey and reports which window made it.</p>
+  <button id="register">Register a passkey</button>
+  <button id="signin">Sign in (pick any passkey)</button>
+  <button id="signin-known" class="quiet">Sign in with this window's passkey</button>
+</section>
+
+<section>
+  <h2>Passkey in AutoFill</h2>
+  <p class="hint">Tap Arm, then tap the field. Does the passkey appear above the keyboard or in a dropdown?</p>
+  <button id="arm" class="quiet">Arm AutoFill</button>
+  <input id="conditional" name="username" autocomplete="username webauthn" placeholder="Username" autocapitalize="off">
+  <button class="quiet" data-observe="passkey offered in AutoFill" data-answer="yes">Offered</button>
+  <button class="quiet" data-observe="passkey offered in AutoFill" data-answer="no">Not offered</button>
+</section>
+
+<section>
+  <h2>Password and code in AutoFill</h2>
+  <p class="hint">First save a test entry in Passwords for <code id="host"></code>: user <code>test</code>, any password. Then
+    <a href="otpauth://totp/Chronos%20test:test?secret=JBSWY3DPEHPK3PXP&amp;issuer=Chronos%20test">add its test code</a>
+    (setup key <code>JBSWY3DPEHPK3PXP</code>, a public example key).</p>
+  <form id="password-form">
+    <input id="username" name="username" autocomplete="username" placeholder="Username" autocapitalize="off">
+    <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Password">
+  </form>
+  <button class="quiet" data-observe="password offered in AutoFill" data-answer="yes">Password offered</button>
+  <button class="quiet" data-observe="password offered in AutoFill" data-answer="no">Not offered</button>
+  <form id="code-form">
+    <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" placeholder="Verification code">
+  </form>
+  <button class="quiet" data-observe="code offered in AutoFill" data-answer="yes">Code offered</button>
+  <button class="quiet" data-observe="code offered in AutoFill" data-answer="no">Not offered</button>
+</section>
+
+<section>
+  <h2>Note</h2>
+  <p class="hint">Anything the page cannot see, such as which option a browser offered first.</p>
+  <input id="note" placeholder="What happened?">
+  <button id="add-note" class="quiet">Add note</button>
+</section>
+
+<section>
+  <h2>Report</h2>
+  <p class="hint">Each window keeps its own report. Copy it from every window you tested.</p>
+  <button id="copy">Copy report</button>
+  <button id="clear" class="quiet">Clear report</button>
+  <textarea id="report" readonly></textarea>
+</section>
+
+<script>
+"use strict";
+
+const LOG_KEY = "chronos-passkey-log";
+const CREDENTIAL_KEY = "chronos-passkey-credential";
+const TIMEOUT_MS = 120000;
+const $ = (id) => document.getElementById(id);
+
+const toBase64Url = (bytes) =>
+  btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const fromBase64Url = (text) =>
+  Uint8Array.from(atob(text.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+const randomBytes = (length) => crypto.getRandomValues(new Uint8Array(length));
+const shortId = (id) => id.slice(0, 10);
+
+function describeContext() {
+  const ua = navigator.userAgent;
+  const device = /iPhone|iPad/.test(ua) ? "iphone" : /Windows/.test(ua) ? "windows" : "other";
+  const browser = navigator.brave ? "brave" : /Edg\//.test(ua) ? "edge" : /Chrome\//.test(ua) ? "chrome" : /Safari\//.test(ua) ? "safari" : "unknown";
+  const installed = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  return `${device}-${browser}-${installed ? "app" : "tab"}`;
+}
+const context = describeContext();
+
+const readLog = () => JSON.parse(localStorage.getItem(LOG_KEY) || "[]");
+let environment = {};
+
+function renderReport() {
+  const lines = readLog().map((e) => `${e.time} ${e.ok === null ? "--" : e.ok ? "OK" : "FAIL"} ${e.action}: ${e.detail}`);
+  $("report").value = [
+    `context: ${context}`,
+    `url: ${location.href}`,
+    `userAgent: ${navigator.userAgent}`,
+    ...Object.entries(environment).map(([key, value]) => `${key}: ${value}`),
+    "",
+    ...lines,
+  ].join("\n");
+}
+
+function record(action, ok, detail) {
+  const entry = { time: new Date().toISOString().slice(0, 19), action, ok, detail };
+  localStorage.setItem(LOG_KEY, JSON.stringify([...readLog(), entry]));
+  $("last").textContent = `${action}: ${ok === null ? "" : ok ? "OK. " : "FAILED. "}${detail}`;
+  $("last").className = ok === null ? "" : ok ? "ok" : "bad";
+  renderReport();
+}
+
+async function readAuthenticatorFlags(authData) {
+  const bytes = new Uint8Array(authData);
+  const expected = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(location.hostname)));
+  const flags = bytes[32];
+  return {
+    rpIdHashMatches: expected.every((byte, i) => byte === bytes[i]),
+    userPresent: !!(flags & 0x01),
+    userVerified: !!(flags & 0x04),
+    backupEligible: !!(flags & 0x08),
+    backedUp: !!(flags & 0x10),
+  };
+}
+
+function readClientData(response, challenge) {
+  const data = JSON.parse(new TextDecoder().decode(response.clientDataJSON));
+  return { type: data.type, origin: data.origin, challengeMatches: data.challenge === toBase64Url(challenge) };
+}
+
+const formatFailure = (error, startedAt) => `${error.name}: ${error.message} (after ${Date.now() - startedAt} ms)`;
+const formatFields = (fields) => Object.entries(fields).map(([key, value]) => `${key}=${value}`).join(" ");
+
+let autofillRequest = null;
+function cancelAutofill() {
+  if (autofillRequest) autofillRequest.abort();
+  autofillRequest = null;
+  $("arm").textContent = "Arm AutoFill";
+}
+
+// WebAuthn is called synchronously inside each tap handler, because Safari needs the user gesture.
+function register() {
+  cancelAutofill();
+  const startedAt = Date.now();
+  const challenge = randomBytes(32);
+  const stamp = new Date().toISOString().slice(5, 16).replace("T", " ");
+  const handle = `${context}|${Date.now().toString(36)}`;
+  navigator.credentials.create({ publicKey: {
+    rp: { id: location.hostname, name: "Chronos passkey test" },
+    // A fresh user id per passkey: reusing one would replace the earlier passkey in iCloud Keychain.
+    user: { id: new TextEncoder().encode(handle), name: `chronos-test ${context} ${stamp}`, displayName: `Chronos test ${context}` },
+    challenge,
+    pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+    authenticatorSelection: { residentKey: "required", requireResidentKey: true, userVerification: "required" },
+    attestation: "none",
+    timeout: TIMEOUT_MS,
+    extensions: { credProps: true },
+  } }).then(async (credential) => {
+    const { response } = credential;
+    const transports = response.getTransports ? response.getTransports() : [];
+    localStorage.setItem(CREDENTIAL_KEY, JSON.stringify({ id: credential.id, transports }));
+    $("signin-known").disabled = false;
+    const authData = response.getAuthenticatorData ? await readAuthenticatorFlags(response.getAuthenticatorData()) : { authData: "unavailable" };
+    record("register", true, formatFields({
+      id: shortId(credential.id),
+      attachment: credential.authenticatorAttachment,
+      transports: transports.join(",") || "none",
+      residentKey: credential.getClientExtensionResults().credProps?.rk,
+      ...readClientData(response, challenge),
+      ...authData,
+      ms: Date.now() - startedAt,
+    }));
+  }).catch((error) => record("register", false, formatFailure(error, startedAt)));
+}
+
+async function reportSignIn(action, credential, challenge, startedAt) {
+  const { response } = credential;
+  const handle = response.userHandle ? new TextDecoder().decode(response.userHandle) : "none";
+  record(action, true, formatFields({
+    id: shortId(credential.id),
+    madeIn: handle.split("|")[0],
+    attachment: credential.authenticatorAttachment,
+    ...readClientData(response, challenge),
+    ...(await readAuthenticatorFlags(response.authenticatorData)),
+    ms: Date.now() - startedAt,
+  }));
+}
+
+function signIn(action, allowCredentials) {
+  cancelAutofill();
+  const startedAt = Date.now();
+  const challenge = randomBytes(32);
+  navigator.credentials.get({ publicKey: {
+    challenge, rpId: location.hostname, userVerification: "required", timeout: TIMEOUT_MS, allowCredentials,
+  } }).then((credential) => reportSignIn(action, credential, challenge, startedAt))
+    .catch((error) => record(action, false, formatFailure(error, startedAt)));
+}
+
+function signInWithKnownPasskey() {
+  const known = JSON.parse(localStorage.getItem(CREDENTIAL_KEY));
+  signIn("sign-in-known", [{ type: "public-key", id: fromBase64Url(known.id), transports: known.transports }]);
+}
+
+function toggleAutofill() {
+  if (autofillRequest) return cancelAutofill();
+  const request = new AbortController();
+  autofillRequest = request;
+  $("arm").textContent = "Disarm AutoFill";
+  const startedAt = Date.now();
+  const challenge = randomBytes(32);
+  navigator.credentials.get({
+    mediation: "conditional",
+    signal: request.signal,
+    publicKey: { challenge, rpId: location.hostname, userVerification: "required" },
+  }).then((credential) => {
+    cancelAutofill();
+    return reportSignIn("sign-in-autofill", credential, challenge, startedAt);
+  }).catch((error) => {
+    if (!request.signal.aborted) record("sign-in-autofill", false, formatFailure(error, startedAt));
+    if (autofillRequest === request) cancelAutofill();
+  });
+  record("arm-autofill", null, "armed, now tap the field");
+}
+
+// Records that a field was filled and its length, never its value.
+function watchField(id) {
+  let reported = false;
+  $(id).addEventListener("input", (event) => {
+    if (reported || !event.target.value) return;
+    reported = true;
+    record("field-filled", null, `${id} length=${event.target.value.length} inputType=${event.inputType || "none"}`);
+  });
+}
+
+async function copyReport() {
+  renderReport();
+  try {
+    await navigator.clipboard.writeText($("report").value);
+    $("copy").textContent = "Copied";
+  } catch {
+    $("report").select();
+    $("copy").textContent = "Select and copy by hand";
+  }
+  setTimeout(() => { $("copy").textContent = "Copy report"; }, 2000);
+}
+
+async function detectEnvironment() {
+  const available = window.PublicKeyCredential;
+  environment = {
+    secureContext: isSecureContext,
+    webAuthn: !!available,
+    platformAuthenticator: available ? await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable() : false,
+    conditionalMediation: available?.isConditionalMediationAvailable ? await PublicKeyCredential.isConditionalMediationAvailable() : "no API",
+    clientCapabilities: available?.getClientCapabilities ? JSON.stringify(await PublicKeyCredential.getClientCapabilities()) : "no API",
+  };
+  renderReport();
+}
+
+$("context").textContent = context;
+$("host").textContent = location.hostname;
+$("signin-known").disabled = !localStorage.getItem(CREDENTIAL_KEY);
+$("register").addEventListener("click", register);
+$("signin").addEventListener("click", () => signIn("sign-in-any", []));
+$("signin-known").addEventListener("click", signInWithKnownPasskey);
+$("arm").addEventListener("click", toggleAutofill);
+$("copy").addEventListener("click", copyReport);
+$("clear").addEventListener("click", () => { localStorage.removeItem(LOG_KEY); renderReport(); });
+$("add-note").addEventListener("click", () => {
+  if ($("note").value) record("note", null, $("note").value);
+  $("note").value = "";
+});
+document.querySelectorAll("[data-observe]").forEach((button) =>
+  button.addEventListener("click", () => record("observed", null, `${button.dataset.observe}: ${button.dataset.answer}`)));
+document.querySelectorAll("form").forEach((form) => form.addEventListener("submit", (event) => event.preventDefault()));
+["conditional", "username", "password", "code"].forEach(watchField);
+detectEnvironment();
+</script>
+</body>
+</html>
