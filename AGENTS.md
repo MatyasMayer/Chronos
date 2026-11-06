@@ -14,8 +14,4 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 
 ## Branching
 
-`main` is the single source of truth: every decision and all finished code lands there.
-
-- **Implementation:** one issue, one short-lived branch from current `main`, one PR. Delete the branch after merge.
-- **Order:** issues touching the same code run in sequence; only disjoint issues run in parallel.
-- **Research:** `research/*` branches are an archive that issue comments link to, so they stay unmerged and in place. Carry their conclusions to `main` as ADRs, glossary terms or a spec, and branch implementation from `main`.
+Commit only on a work branch: `main` and `develop` change through PRs alone. Design work lands on `main` until the owner creates `develop`; from then on, everything lands on `develop`. Before creating a branch or opening a PR, read `docs/agents/branching.md`.
