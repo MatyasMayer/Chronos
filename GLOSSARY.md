@@ -5,7 +5,7 @@ A personal study organiser that gathers everything about each subject a student 
 ## Language
 
 **Subject**:
-A single course the student is taking, and the hub that everything else about it hangs off.
+A single course or self-study topic the student is taking, and the hub that everything else about it hangs off. Only its name is required.
 _Avoid_: Course, class, předmět
 
 **Semester**:
@@ -27,7 +27,7 @@ Study material kept with a Subject: either a stored **file** (lecture slides, PD
 _Avoid_: Material, attachment, document
 
 **Task**:
-A single piece of work you tick off when done, with an optional due date (e.g. a homework).
+A single piece of work you tick off when done, with an optional due date (e.g. a homework). Need not belong to a Subject.
 _Avoid_: To-do, assignment, deadline
 
 **Event**:
