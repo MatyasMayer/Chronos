@@ -38,6 +38,16 @@ _Avoid_: Appointment, meeting, session
 A free-form page you write yourself, which may belong to a Subject and link to any other item.
 _Avoid_: Page, document
 
+## Imports
+
+**Import**:
+A connection to an outside source, such as the Sirius timetable, that brings Events and Tasks into Chronos and keeps them up to date. What it brought in stays when the connection ends.
+_Avoid_: Feed, subscription, sync
+
+**Cancelled**:
+The state of an imported Event or Task that left its Import but was kept because the owner had changed it.
+_Avoid_: Deleted, removed
+
 ## Offline
 
 **Pin**:
