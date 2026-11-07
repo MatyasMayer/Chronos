@@ -29,7 +29,7 @@ All data below was read on 2026-11-07. "Source" means the files I read, not the 
 | [`iart-ai/web-animation-skills`](https://github.com/iart-ai/web-animation-skills) (`b6dba3e`) | Yes | **Nine skills** (gsap-web, 60fps-animation, page-transition-animation, accessible-animation, micro-interaction, glassmorphism, svg-animation, lottie-animation, ascii-animation). "GSAP, SVG, Lottie, mobile micro-interactions" is accurate. The README funnels to a paid agent at iart.ai. | MIT | 19 commits, one author, all on 2026-06-22 | **Partly, but redundant** |
 | [`greensock/gsap-skills`](https://github.com/greensock/gsap-skills) (`aed9cfd`) | Yes | **Eight GSAP skills** (core, timeline, ScrollTrigger, plugins, react, frameworks, performance, utils). Official: owned by the `greensock` org, and GSAP's author `jackdoyle` is the top contributor. | MIT (skills). GSAP itself is under the [Standard "No Charge" licence](https://gsap.com/standard-license/), effective 2025-04-30 | 24 commits, latest 2026-04-21 (repo pushed 2026-07-29); 18 k stars | **Good skill, wrong engine** |
 | [`msrbuilds/animate-css-skill`](https://github.com/msrbuilds/animate-css-skill) (`35a8e22`) | Yes | One `SKILL.md` plus a bundled `animate.min.css` (Animate.css 4.1.1). Matches the "plain CSS and React, IntersectionObserver and reduced-motion" description. | **None** (no LICENSE file; the API reports `null`) | 4 commits, all on 2026-04-08 | **No** |
-| [`oil-oil/oil-motion`](https://github.com/oil-oil/oil-motion) (`07e31f2`) | Yes | **Does not match the description.** It turns AI-generated video or sprite sequences into scroll, pointer or drag-controlled web animation. There is no "canvas particles" pipeline: the word "particle" does not appear in the README or `SKILL.md`. The drag/damping code (`smoothDamp` in `assets/interactive-motion.ts`) exists, but it scrubs video, not UI. Its pipeline needs Python, Pillow, FFmpeg and an image/video generation API behind a local credentials server. | MIT | 26 commits, 2026-08-07 to 2026-10-04; 2.8 k stars | **No** |
+| [`oil-oil/oil-motion`](https://github.com/oil-oil/oil-motion) (`07e31f2`) | Yes | **Does not match the description.** It turns AI-generated video or sprite sequences into scroll, pointer or drag-controlled web animation. There is no "canvas particles" pipeline: across its docs and code, in English and Chinese, particles appear only as passing remarks in two reference notes (`references/prompting.md`, `references/motion-patterns.md`). The drag/damping code (`smoothDamp` in `assets/interactive-motion.ts`) exists, but it scrubs video, not UI. Its pipeline needs Python, Pillow, FFmpeg and an image/video generation API behind a local credentials server. | MIT | 26 commits, 2026-08-07 to 2026-10-04; 2.8 k stars | **No** |
 | [`musoyangrigor/scroll-video-website-skill`](https://github.com/musoyangrigor/scroll-video-website-skill) (`e61e534`) | Yes | Matches its description: video to a WebP frame sequence on a scroll-scrubbed full-viewport canvas ([`SKILL.md`](https://github.com/musoyangrigor/scroll-video-website-skill/blob/main/scroll-video-website/SKILL.md)). | MIT | 20 commits, 2026-08-21 to 2026-09-04 | **No** (as the issue guessed) |
 
 ### Per-lead notes
@@ -48,7 +48,7 @@ The value of the repo is a list of ideas, and the same ideas are in Emil's and J
 
 **animate-css-skill.** No licence file means all rights reserved by default. It bundles Animate.css, which is under the Hippocratic License 2.1 (an ethical-use licence, not OSI-approved; read from the [LICENSE](https://github.com/animate-css/animate.css/blob/main/LICENSE)). Its mapping table is marketing-site motion: buttons get `pulse`, `bounceIn`, `tada`, modals get `zoomIn`/`bounceIn`/`flipInX`, errors get `shakeX`, and everything below the fold reveals on scroll. Animate.css itself was last pushed 2024-07-29. Reject.
 
-**oil-motion.** The issue's description ("cursor physics, drag inertia and canvas particles") does not match the source. Its own `SKILL.md` says it is *not* for "interface transitions, button feedback, and layout motion that CSS, JavaScript, SVG, Lottie, or real-time 3D can handle", which is what Chronos needs. It also sets up a credentials flow, a local server and API-billed generation. Reject.
+**oil-motion.** The issue's description ("cursor physics, drag inertia and canvas particles") does not match the source. Its [`README.en.md`](https://github.com/oil-oil/oil-motion/blob/main/README.en.md) says "Interface transitions, button feedback, and layout motion that CSS, JavaScript, SVG, Lottie, or real-time 3D can handle directly belong in regular front-end work and don't need this asset pipeline", and its `SKILL.md` description says the same in Chinese. That work is what Chronos needs. It also sets up a credentials flow, a local server and API-billed generation. Reject.
 
 **scroll-video.** Out of scope. Chronos has no scroll-driven pages; the skill itself holds the first frame under reduced motion.
 
@@ -140,7 +140,7 @@ A second engine is **not justified**. Costs: 27 kB gzip (GSAP) on top of Motion,
 ### Reconciliation with `design-principles` §4
 
 `design-principles` proposed `fast 120 ms`, `base 200 ms`, `slow 280 ms`, `ease-out`, "transform and opacity only", no animation on keyboard actions, and "one satisfying check animation of about 200 ms" for the tick. I keep all of it except two things:
-- **Tick length.** I propose a combined beat of about 140 ms with no overshoot, not 200 ms, because ticking is a tens-a-day action and the prototype's 220 ms overshoot has not been seen. Reopen if a real-device look says it feels flat.
+- **Tick length.** I propose a combined beat of about 120 ms with no overshoot, not 200 ms, because ticking is a tens-a-day action and the prototype's 220 ms overshoot has not been seen. Reopen if a real-device look says it feels flat.
 - **Tier names.** I add `instant` (0) and give the exit rule "one token faster than the enter".
 
 ### Proposed tokens (CSS; Tailwind v4)
@@ -162,6 +162,8 @@ Tailwind v4 has a `--ease-*` namespace that creates `ease-*` utilities, but no `
 
   --press-scale: 0.96;
   --travel: 8px;          /* small translate for enters */
+  --plate-travel: 0.3em;  /* room code swap, relative to its large text */
+  --draw-dur: var(--dur-fast); /* check stroke and title strike */
   --collapse-dur: var(--dur-base);
 
   --settle-delay: 4000ms; /* behaviour (prototype), not a motion value */
@@ -171,12 +173,14 @@ Tailwind v4 has a `--ease-*` namespace that creates `ease-*` utilities, but no `
   :root {
     --press-scale: 1;     /* no scale */
     --travel: 0px;        /* no translate; opacity cross-fade remains */
+    --plate-travel: 0em;
+    --draw-dur: 0ms;      /* stroke and strike appear already drawn */
     --collapse-dur: 0ms;  /* rows leave by opacity only */
   }
 }
 ```
 
-In markup this reads as `duration-(--dur-fast) ease-out` (arbitrary-value shorthand; syntax is the v4 pattern but I did not confirm this exact form). Under reduced motion the durations stay, so the opacity and colour cross-fades remain, while distance and scale go to nothing. This is the tiered model from Jakub's skill and the HIG, implemented through tokens rather than a global `transition: none !important`, which the prototype uses (`today.html` lines 395 to 397) and which removes the colour feedback too.
+In markup this reads as `duration-(--dur-fast) ease-out` (arbitrary-value shorthand; syntax is the v4 pattern but I did not confirm this exact form). Under reduced motion the durations stay, so the opacity and colour cross-fades remain, while distance and scale go to nothing. Where section 7 names a shorter cross-fade for a moment, that moment sets it itself. This is the tiered model from Jakub's skill and the HIG, implemented through tokens rather than a global `transition: none !important`, which the prototype uses (`today.html` lines 395 to 397) and which removes the colour feedback too.
 
 Spring tokens, only if Motion is used (not needed for the five moments). Derived by my arithmetic from Emil's `apple-design` table (default `damping 1.0`, response 0.3; momentum `damping ~0.8`) using stiffness = (2π / response)² and damping = 2 · ratio · √stiffness with mass 1. Motion's physics form defines the ratio as `damping / (2·√(stiffness·mass))` (confirmed in `spring.ts`); the response-to-stiffness mapping is the usual SwiftUI convention and I did not verify it against Apple's page.
 - `spring-settle`: `{ type: "spring", stiffness: 440, damping: 42, mass: 1 }` (critically damped, no overshoot)
@@ -196,8 +200,8 @@ Frequency: roughly 5 to 20 a day, from a thumb or a pointer. That is "tens a day
 |---|---|
 | Properties | Box `background-color` and `border-color` to plate green; check `stroke-dashoffset`; press `scale`; title strike `background-size`; later, row `height` and `opacity` |
 | Press | `scale(var(--press-scale))` on the 28 px box while pressed, `--dur-fast`, `ease-out`. The 44 px target is unchanged |
-| Fill + check | Colour fill `--dur-fast` `ease-out`; stroke draw 24 to 0 over `--dur-fast`, no delay. **No overshoot, no scale-up "seat".** Whole beat about 140 ms |
-| Row text | The strike draws left to right over `--dur-fast` with the check. "Done at 11:40" swaps instantly. The row does not move (prototype fix 2) |
+| Fill + check | Colour fill `--dur-fast` `ease-out`; stroke draw 24 to 0 over `--draw-dur`, no delay. **No overshoot, no scale-up "seat".** Whole beat about 120 ms, since the parts run together |
+| Row text | The strike draws left to right over `--draw-dur` with the check. "Done at 11:40" swaps instantly. The row does not move (prototype fix 2) |
 | Counts | The "N overdue" and "N due today" tab text changes with a `--dur-fast` opacity cross-fade (the prototype rolls it 220 ms with translateY); a tab that reaches zero retracts over `--dur-base` as in the prototype |
 | Settle | 4 s after the last tick, ticked rows collapse into "Done today": measured `height` to 0 over `--collapse-dur` with `ease-out`, `opacity` out over `--dur-fast`, then they are moved in the DOM. Do not start while a pointer is down in the list or focus is inside it (the prototype handles focus only); this addresses its known "list can shift under a thumb" weakness |
 | Interruption | All CSS transitions, so un-ticking mid-draw or mid-collapse reverses from the current state. The prototype's `setTimeout` DOM move re-checks the `leaving` class, which is the right guard. Another tick resets the 4 s timer |
@@ -260,12 +264,12 @@ The plate is the green frame holding the yellow Now insert (room code) and Next.
 |---|---|
 | Frequency | A few times a day, and **rarely seen**: it happens at a clock boundary, and most opens of the app land between boundaries. That is why it can have a little character, and why it must never replay on open |
 | Properties | Outgoing and incoming room code: `opacity` and `translate` on Y; the insert's `background-color` (yellow to socket and back); text of Next changes by opacity cross-fade |
-| Timing | Old code leaves over `--dur-fast`: `translate: 0 -0.3em` and `opacity` to 0, `ease-out`. New code enters over `--dur-base`: from `translate: 0 0.3em` and `opacity: 0`, `ease-out`, starting at the same moment. The insert colour transitions over `--dur-base`. Total about 200 ms. Large text travels only a fraction of its height, which is smaller than the prototype's `roll` (`-.7em`, 220 ms, lines 150 to 151) |
+| Timing | Old code leaves over `--dur-fast`: `translate: 0 calc(-1 * var(--plate-travel))` and `opacity` to 0, `ease-out`. New code enters over `--dur-base`: from `translate: 0 var(--plate-travel)` and `opacity: 0`, `ease-out`, starting at the same moment. The insert colour transitions over `--dur-base`. Total about 200 ms. Large text travels only a fraction of its height, which is smaller than the prototype's `roll` (`-.7em`, 220 ms, lines 150 to 151) |
 | Implementation | A keyed swap with a one-shot keyframe is enough (the content is replaced, nobody can interrupt it mid-flight in normal use). No Motion or shared-element transition: the Now code and the Next code are different sizes (container-query font sizing), so a shared-element move would scale text |
 | Only when witnessed | Run the animation only if the change happens while the app is visible and the change came from the clock tick. On open, resume, route entry or theme switch, render the new state with no animation |
 | Interruption | If a second change lands during the animation (a clock jump), snap to the final state and skip the animation |
 | Elapsed edge | Resets instantly, as in 7.4 |
-| Reduced motion | `--travel: 0`: the room code cross-fades over `--dur-fast`. The insert's colour change stays |
+| Reduced motion | `--plate-travel: 0`: the room code cross-fades over `--dur-fast`. The insert's colour change stays |
 | Accessibility | The plate is the sign: announce the change politely once, for example "Now: BI-PSI in T9:350" (judgement; screen-reader behaviour not tested) |
 | Not to do | No flip-board or departure-board flap (it would look like a gimmick on the one screen opened constantly), no confetti, no stagger |
 
@@ -281,7 +285,7 @@ The plate is the green frame holding the yellow Now insert (room code) and Next.
 ## 8. Conflicts, glossary gaps and the open stack question
 
 - **No ADR is contradicted.** ADR-0001 (haptics only from the checkbox switch) and ADR-0003 (yellow means live now; colour carries meaning; an Event's kind is a word) are respected. ADR-0004 does not concern animation.
-- **Divergence from earlier research (both are proposals, not contradictions):** `design-principles` §4 wanted a ~200 ms tick, and `ui-tooling` listed Motion springs for press feedback, list reordering and sheet gestures plus View Transitions for routes. Section 7 gives a ~140 ms tick, CSS for press and sheets, and no route transition by default.
+- **Divergence from earlier research (both are proposals, not contradictions):** `design-principles` §4 wanted a ~200 ms tick, and `ui-tooling` listed Motion springs for press feedback, list reordering and sheet gestures plus View Transitions for routes. Section 7 gives a ~120 ms tick, CSS for press and sheets, and no route transition by default.
 - **Glossary gap.** `GLOSSARY.md` does not define **plate** (ADR-0003 and the prototypes use it), nor the **Now insert** or **Done today**. The motion spec depends on all three. I propose adding at least **Plate** (the green sign that holds the yellow Now insert and Next) so agents do not drift to "card" or "banner". "Sheet" is not a glossary term either; the prototype's Add is a menu shaped as the plate, and the issue's "Add sheet" is the form that follows. Name which one the spec means.
 - **"Which editor and UI kit?" (still open).** Its stated kit is Tailwind v4, shadcn/ui on Base UI, Motion and Lucide: the stack assumption I used. Nothing there changes this finding, but two things depend on how it resolves. (1) The CSS-first approach leans on Base UI's `data-starting-style`/`data-ending-style` and Drawer variables; if the kit moved to Radix, those hooks become `data-state` and the Drawer is a different component. (2) BlockNote's or Tiptap's slash menu, side menu and toolbars bring their own animations; the `/` menu is keyboard-initiated and used often, so it should get `--dur-instant`. Flag this when that ticket resolves.
 
@@ -299,7 +303,7 @@ The plate is the green frame holding the yellow Now insert (room code) and Next.
 - The owner's actual frequency of ticks, Adds and Undos. Counts here are estimates.
 
 **Needs checking on the iPhone 14 (iOS 27, 60 Hz) as an installed PWA, and on Windows in Brave**
-1. The tick beat: is about 140 ms with no overshoot satisfying or flat? Does `:active` press feedback appear on pointer-down, and does it line up with the native `switch` haptic if that is used?
+1. The tick beat: is about 120 ms with no overshoot satisfying or flat? Does `:active` press feedback appear on pointer-down, and does it line up with the native `switch` haptic if that is used?
 2. The Done-today collapse: any jitter, and any list shift under a thumb. Compare measured-height with Motion `layout`.
 3. The Add menu exit in Safari (the `overlay` question), then the sheet with the iOS keyboard open, and the left-edge swipe-back conflict (`ui-tooling`: keep the left 20 px free).
 4. The plate swap: text blur or shimmer on large Barlow Condensed text during a translate; interaction with the `fit()` font-shrink script (do not run it mid-animation).
