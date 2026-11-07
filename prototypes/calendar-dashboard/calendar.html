@@ -1,0 +1,1025 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Calendar and Today prototype</title>
+<!-- THROWAWAY PROTOTYPE for "What do the calendar and dashboard look like?" (issue 14).
+     Chosen: Week rotated, Day Focus, Month Grid, and Today with Next 7 days below. Earlier rounds stay
+     reachable: #round=1, #dv=a (Lanes), c, d; on Today #v=b, #v=c, #q=socket; on the calendar #kinds=shape.
+     Everything lives in memory. State is in the URL hash, so a view can be shared. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #F0F2EC; --ink: #101A14; --muted: #4A574F; --line: #D3D8CF; --box: #5F6B63; --tickbox: #00612E; --press: #E4E7DF;
+  --plate: #00612E; --socket: #00431F; --chalk: #F2F5EE; --chalk-muted: #D4ECD9; --chalk-line: #49845A;
+  --yellow: #F4E52E; --yellow-spent: #D6C91F; --on-yellow: #0B0F0D; --live-edge: #00612E;
+  --brick: #A5371F; --alert: #A5371F;
+  --seg: #00612E; --seg-past: #A9B3AB;
+  --slab: #101A14; --slab-ink: #F2F5EE; --slab-muted: #C5CFC8;
+  --card: #FFFFFF; --sheet: #FFFFFF;
+  --proto: #24184A; --proto-ink: #F3EEFF; --proto-on: #CDBBFF;
+  --r: 6px;
+  --text: "Barlow", "Segoe UI", system-ui, sans-serif;
+  --sign: "Barlow Condensed", "Arial Narrow", "Segoe UI", sans-serif;
+  --slide: cubic-bezier(.2, .8, .2, 1);
+}
+:root[data-dark] {
+  --paper: #000; --ink: #F2F5EE; --muted: #A9B6AE; --line: #1F2925; --box: #7F8F87; --tickbox: #7F8F87; --press: #101613;
+  --socket: #002C12; --brick: #B8432A; --alert: #F2A08A; --seg: #4AA969; --seg-past: #46534D; --live-edge: transparent;
+  --slab: #DDE4DC; --slab-ink: #0F1A16; --slab-muted: #3A4A43;
+  --card: #141C18; --sheet: #101613;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.35 var(--text); font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+h1, h2, h3, p, ul { margin: 0; padding: 0; font: inherit; }
+ul { list-style: none; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+svg.i { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 3px; }
+
+/* shell, as on Today */
+.app { min-height: 100dvh; }
+[data-ph] .app { max-width: 430px; margin: 0 auto; }
+[data-frame=phone] .app { max-width: 390px; box-shadow: 0 0 0 1px var(--line); }
+main { padding: 0 12px 110px; min-width: 0; }
+.rail { display: none; }
+.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; gap: 2px; padding: 8px 12px max(8px, env(safe-area-inset-bottom)); background: var(--paper); border-top: 1.5px solid var(--plate); }
+[data-frame=phone] .dock { left: 50%; right: auto; width: 390px; transform: translateX(-50%); }
+.dock button { flex: 1; display: grid; justify-items: center; align-content: center; gap: 1px; min-height: 56px; font: 500 17px/1.1 var(--sign); color: var(--muted); border-radius: var(--r); }
+.dock button[aria-current] { color: var(--ink); font-weight: 600; }
+.dock .add, .rail .add { display: flex; align-items: center; justify-content: center; gap: 6px; height: 56px; background: var(--plate); color: var(--chalk); border-radius: var(--r); font: 600 22px/1 var(--sign); }
+.dock .add { flex: 0 0 96px; margin-left: 6px; }
+:root:not([data-ph]) .app { display: grid; grid-template-columns: 232px minmax(0, 1fr); }
+:root:not([data-ph]) .dock { display: none; }
+:root:not([data-ph]) .rail { display: flex; flex-direction: column; gap: 18px; position: sticky; top: 0; height: 100dvh; padding: 20px 16px; border-right: 1px solid var(--line); }
+:root:not([data-ph]) main { padding: 0 28px 28px; }
+.mark { font: 600 30px/1 var(--sign); padding: 2px 8px 0; }
+.rail .add { height: 48px; font-size: 21px; width: 100%; }
+.rail nav button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 8px; border-radius: var(--r); font-weight: 500; color: var(--muted); }
+.rail nav button:hover { background: var(--press); color: var(--ink); }
+.rail nav button[aria-current] { color: var(--ink); font-weight: 600; background: var(--press); }
+
+/* calendar head: its own structure, no plate and no green tabs */
+.ctop { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 12px 2px 10px; }
+.ctop h1 { font: 600 30px/1.05 var(--sign); }
+.ctop h1 small { display: block; font: 500 17px/1.2 var(--sign); color: var(--muted); }
+.ctl { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.nav { display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--r); font: 600 24px/1 var(--sign); }
+.nav:hover, .jump:hover { background: var(--press); }
+.jump { height: 44px; padding: 0 10px; border-radius: var(--r); font: 600 19px/1 var(--sign); }
+.segs { display: flex; padding: 3px; gap: 2px; border-radius: var(--r); background: var(--press); }
+.segs button { min-width: 62px; height: 38px; padding: 0 10px; border-radius: 4px; text-align: center; font: 600 19px/1 var(--sign); color: var(--muted); }
+.segs button[aria-pressed=true] { background: var(--ink); color: var(--paper); }
+[data-ph] .ctl { margin-left: 0; width: 100%; }
+[data-ph] .segs { flex: 1; }
+[data-ph] .segs button { flex: 1; }
+[data-ph] .ctop { padding-top: max(12px, env(safe-area-inset-top)); }
+
+/* one Event, in any structure. Finished hollow, coming green, live yellow, exam ink. */
+.e { position: absolute; display: block; overflow: hidden; padding: 3px 6px; border-radius: 3px; font: 500 16px/1.14 var(--sign); text-align: left; }
+.e b { font-weight: 600; }
+.e span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; }
+.e.up { background: var(--plate); color: var(--chalk); }
+.e.past { background: var(--paper); color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--seg-past); }
+.g-col.today .e.past, .l-row.today .e.past { background: var(--card); }
+.e.live { background: var(--yellow); color: var(--on-yellow); box-shadow: inset 0 0 0 1.5px var(--live-edge); }
+.e .fill { position: absolute; left: 0; top: 0; background: var(--yellow-spent); }
+.e.exam.up, .e.exam.live { background: var(--slab); color: var(--slab-ink); box-shadow: none; }
+.e.exam b { font-size: 18px; }
+.e.half span:nth-of-type(n+2) { display: none; }
+[data-ph] .g-col .e, [data-ph] .l-lane .e { padding: 3px 3px; }
+[data-ph] .l-lane .e span { text-overflow: clip; }
+[data-ph] .l-lane .e { display: flex; align-items: center; }
+[data-ph] .g-col .e span { text-overflow: clip; }
+[data-ph] .g-col .e:hover { z-index: 2; }
+.e.cx { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--seg-past); }
+.e.cx b { text-decoration: line-through; }
+/* Kinds: Shape, the alternative to the word alone */
+[data-kinds=shape] .e.k-lab, [data-kinds=shape] .e.k-tutorial { padding-left: 13px; }
+[data-kinds=shape] .e.k-lab::before, [data-kinds=shape] .e.k-tutorial::before { content: ""; position: absolute; z-index: 1; left: 3px; top: 3px; bottom: 3px; width: 4px; background: currentColor; border-radius: 1px; }
+[data-kinds=shape] .e.k-assessment.up { background: var(--paper); color: var(--ink); box-shadow: inset 0 0 0 3px var(--plate); }
+[data-kinds=shape] .e.k-course.up { background: transparent; color: var(--ink); box-shadow: none; outline: 1.5px dashed var(--seg); outline-offset: -2px; }
+
+/* the Task's mark everywhere: a square box */
+.box { position: relative; display: grid; place-items: center; flex: none; width: 24px; height: 24px; cursor: pointer; }
+.box input { position: absolute; inset: -10px; width: 44px; height: 44px; margin: 0; opacity: 0; cursor: pointer; }
+.box b { display: grid; place-items: center; width: 18px; height: 18px; border: 2px solid var(--tickbox); border-radius: 3px; }
+.box svg { width: 13px; height: 13px; fill: none; stroke: var(--chalk); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; visibility: hidden; }
+.box input:checked + b { background: var(--plate); border-color: var(--plate); }
+.box input:checked + b svg { visibility: visible; }
+.tk { display: flex; align-items: center; gap: 4px; min-width: 0; min-height: 28px; }
+.tk > button { min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; line-height: 1.2; }
+.tk.done > button { color: var(--muted); text-decoration: line-through; }
+.tk.over > button { color: var(--alert); font-weight: 600; }
+.flag { display: inline-flex; align-items: center; gap: 3px; height: 24px; padding: 0 6px; background: var(--brick); color: #fff; font: 600 17px/1 var(--sign); border-radius: 3px; white-space: nowrap; }
+.flag svg.i { width: 14px; height: 14px; stroke-width: 2; }
+
+/* A: Grid. Time runs down, days run across. */
+.g { display: grid; min-width: 0; }
+.g-head { display: grid; place-items: start; padding: 4px 6px 6px; width: 100%; font: 500 18px/1.1 var(--sign); color: var(--muted); }
+.g-head b { font: 600 25px/1.1 var(--sign); color: var(--ink); }
+.g-head.today b { display: inline-block; min-width: 34px; padding: 0 5px; background: var(--plate); color: var(--chalk); border-radius: 4px; text-align: center; }
+.g-due { min-width: 0; padding: 4px 6px 6px; border-top: 1px solid var(--line); border-left: 1px solid var(--line); display: grid; align-content: start; gap: 1px; }
+.g-lab { font: 500 17px/1 var(--sign); color: var(--muted); padding: 10px 4px 0 0; border-top: 1px solid var(--line); }
+.g-col { position: relative; border-left: 1px solid var(--line); border-top: 1px solid var(--line); min-width: 0; }
+.g-col.today { background: var(--card); }
+.g-col.hol { background: repeating-linear-gradient(135deg, transparent 0 7px, var(--line) 7px 8px); }
+.g-hr { position: absolute; left: 0; right: 0; height: 1px; background: var(--line); }
+.g-hours { position: relative; }
+.g-hours span { position: absolute; right: 6px; transform: translateY(-50%); font: 500 16px/1 var(--sign); color: var(--muted); }
+.nowl { position: absolute; z-index: 3; left: 0; right: 0; height: 2px; background: var(--ink); }
+.g-hours .nowt { z-index: 4; right: 2px; padding: 0 4px; background: var(--ink); color: var(--paper); font: 600 17px/23px var(--sign); border-radius: 3px; }
+.holname { position: absolute; left: 6px; right: 6px; top: 8px; font: 600 17px/1.1 var(--sign); color: var(--muted); }
+.cnt { display: inline-flex; align-items: center; gap: 3px; font: 600 17px/1 var(--sign); }
+.cnt i { width: 12px; height: 12px; border: 2px solid var(--tickbox); border-radius: 2px; }
+.cnt.over { color: var(--alert); }
+.cnt.over i { border-color: var(--alert); }
+
+/* month grid */
+.m { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.m-wd { padding: 5px 7px; font: 600 18px/1 var(--sign); color: var(--muted); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.m-d { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; width: 100%; min-width: 0; min-height: 122px; padding: 5px 6px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow: hidden; }
+.m-d:hover { background: var(--press); }
+.m-d.other { color: var(--muted); }
+.m-d.other .m-n { color: var(--muted); }
+.m-d.today { background: var(--card); }
+.m-n { align-self: flex-start; font: 600 22px/1.15 var(--sign); }
+.m-d.today .m-n { padding: 0 6px; background: var(--plate); color: var(--chalk); border-radius: 4px; }
+.m-l { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font: 500 16px/1.25 var(--sign); }
+.m-l.ex { padding: 0 5px; margin-bottom: 2px; background: var(--slab); color: var(--slab-ink); border-radius: 3px; font-weight: 600; }
+.m-l.one { color: var(--ink); font-weight: 600; }
+.m-l.q { color: var(--muted); }
+.m-l.tkm::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 4px; border: 2px solid var(--tickbox); border-radius: 2px; }
+.m-l.tkm.over { color: var(--alert); font-weight: 600; }
+.m-l.tkm.over::before { border-color: var(--alert); }
+/* the small month: a phone, and Board's side */
+.mm .m-d { min-height: 54px; padding: 3px 2px; text-align: center; }
+.mm .m-n { font-size: 20px; align-self: center; }
+.mm .m-d.sel { box-shadow: inset 0 0 0 2px var(--ink); }
+.marks { display: flex; justify-content: center; gap: 3px; height: 10px; margin-top: 2px; }
+.marks i { width: 9px; height: 9px; border-radius: 2px; }
+.marks .ev { height: 4px; margin-top: 3px; width: 12px; background: var(--seg); }
+.marks .ex { width: 16px; background: var(--slab); }
+.marks .tk2 { border: 2px solid var(--tickbox); }
+.marks .ov { border: 2px solid var(--alert); }
+
+/* B: Lanes. Time runs across, one lane per day. */
+.l-scale { position: relative; height: 22px; margin-left: var(--lw); }
+.l-scale span { position: absolute; font: 500 16px/22px var(--sign); color: var(--muted); padding-left: 3px; }
+.l-row { display: grid; grid-template-columns: var(--lw) minmax(0, 1fr); border-top: 1px solid var(--line); }
+.l-row.today { background: var(--card); }
+.l-day { width: 100%; align-self: stretch; padding: 5px 6px; font: 500 17px/1.1 var(--sign); color: var(--muted); }
+.l-day b { display: block; font: 600 23px/1.05 var(--sign); color: var(--ink); }
+.l-row.today .l-day b { color: var(--ink); }
+.l-lane { position: relative; height: var(--lh); margin: 4px 0; background-image: linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: calc(100% / 12) 100%; }
+.l-row.quiet .l-lane { height: 26px; margin: 3px 0; }
+.l-row.quiet .l-day { display: flex; gap: 6px; align-items: baseline; padding-block: 2px; }
+.l-row.quiet .l-day b { font-size: 20px; }
+.l-due { grid-column: 2; display: flex; flex-wrap: wrap; gap: 0 14px; padding: 0 2px 4px; }
+.l-due .tk { max-width: 100%; }
+.l-hol { position: absolute; inset: 0; display: flex; align-items: center; padding-left: 8px; font: 600 17px/1 var(--sign); color: var(--muted); }
+.l-nowl { position: absolute; z-index: 3; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--ink); }
+.l-wk { padding: 10px 0 3px; font: 600 18px/1 var(--sign); color: var(--muted); }
+/* a month of lanes: the shape of a whole month */
+.lm .l-row { --lw: 62px; }
+.lm .l-day { padding: 1px 5px; display: flex; gap: 6px; align-items: baseline; font-size: 16px; }
+.lm .l-day b { display: inline; font-size: 19px; }
+.lm .l-lane { height: 19px; margin: 3px 0; }
+.lm .e { padding: 0; }
+.lm .l-tick { position: absolute; z-index: 2; right: 3px; top: 1px; display: flex; align-items: center; gap: 3px; font: 600 16px/17px var(--sign); padding: 0 3px; background: var(--paper); }
+.lm .l-row.today .l-tick { background: var(--card); }
+
+/* C: Board. No time scale: rows, like a departures board. */
+.b { display: grid; gap: 28px; align-items: start; }
+:root:not([data-ph]) .b { grid-template-columns: 340px minmax(0, 1fr); }
+:root:not([data-ph]) .b-side { position: sticky; top: 12px; display: grid; gap: 20px; }
+.b-h { display: flex; align-items: baseline; gap: 8px; padding: 14px 0 5px; border-bottom: 2px solid var(--ink); font: 600 23px/1.1 var(--sign); }
+.b-h small { font: 500 18px/1 var(--sign); color: var(--muted); }
+.b-h.past { border-color: var(--line); color: var(--muted); }
+.b-h .rel { margin-left: auto; font: 600 18px/1 var(--sign); color: var(--ink); }
+.b-row { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 2px 10px; width: 100%; align-items: baseline; padding: 7px 0 8px; border-bottom: 1px solid var(--line); }
+.b-row:hover { background: var(--press); }
+.b-t { font: 600 20px/1.15 var(--sign); }
+.b-t small { display: block; font: 500 16px/1.1 var(--sign); color: var(--muted); }
+.b-m { min-width: 0; }
+.b-m b { font: 600 22px/1.15 var(--sign); margin-right: 8px; }
+.b-m em { font-style: normal; font-weight: 500; }
+.b-m span { display: block; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.b-m span b { font: 600 18px/1 var(--sign); color: var(--ink); margin-right: 3px; }
+.b-row.past .b-t, .b-row.past .b-m b, .b-row.past .b-m em, .b-row.past .b-m span b { color: var(--muted); }
+.b-row.cx .b-m > b { text-decoration: line-through; }
+.chip { padding: 0 7px; font: 600 19px/25px var(--sign); border-radius: 3px; background: var(--yellow); color: var(--on-yellow); box-shadow: inset 0 0 0 1.5px var(--live-edge); }
+.word { font: 600 18px/1 var(--sign); color: var(--muted); }
+.b-row.exam { padding: 9px 10px 10px; border: 0; background: var(--slab); color: var(--slab-ink); border-radius: var(--r); margin: 5px 0; }
+.b-row.exam:hover { background: var(--slab); }
+.b-row.exam .b-t small, .b-row.exam .b-m span { color: var(--slab-muted); }
+.b-row.exam .b-m span b { color: var(--slab-ink); }
+.b-row.exam .word { color: var(--slab-ink); }
+.b-tk { display: flex; align-items: center; gap: 6px; padding: 5px 0; border-bottom: 1px solid var(--line); min-height: 44px; }
+.b-tk .tk { flex: 1; }
+.b-tk .sub { font: 600 18px/1 var(--sign); color: var(--muted); }
+.b-fold { display: block; width: 100%; min-height: 44px; padding: 8px 0; color: var(--muted); font: 500 19px/1.2 var(--sign); border-bottom: 1px solid var(--line); }
+.b-fold:hover { color: var(--ink); }
+.b-none { padding: 10px 0; color: var(--muted); }
+.strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.strip button { display: grid; justify-items: center; gap: 1px; padding: 5px 0 6px; border-radius: var(--r); font: 500 17px/1.1 var(--sign); color: var(--muted); }
+.strip button b { font: 600 23px/1.1 var(--sign); color: var(--ink); }
+.strip button[aria-pressed=true] { background: var(--ink); color: var(--paper); }
+.strip button[aria-pressed=true] b { color: var(--paper); }
+.strip button[aria-pressed=true] .marks .ev { background: var(--paper); }
+.strip button[aria-pressed=true] .marks .ex { background: var(--paper); }
+.strip button[aria-pressed=true] .marks .tk2 { border-color: var(--paper); }
+.strip button.isnow b { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 2px; }
+.sidehead { font: 600 21px/1.1 var(--sign); padding-bottom: 4px; }
+
+/* Today: the plate, ruler and lists come from the Yellow Now prototype */
+.top { position: relative; display: flex; align-items: flex-end; min-height: 58px; padding: 6px 4px 8px; line-height: 1.2; }
+.top h1 { font-weight: 600; font-size: 17px; }
+.top h1 span { display: block; font-weight: 500; font-size: 16px; color: var(--muted); }
+:root:not([data-ph]) .top { min-height: 68px; align-items: center; }
+:root:not([data-ph]) .top h1 { font-size: 26px; }
+:root:not([data-ph]) .top h1 span { display: inline; font-size: 26px; font-weight: 400; margin-left: 6px; }
+.route { position: relative; }
+.tabs { position: absolute; right: 0; bottom: 100%; display: flex; }
+.tab { display: flex; align-items: center; gap: 5px; height: 44px; padding: 0 11px; white-space: nowrap; font: 600 19px/1 var(--sign); border-radius: var(--r) var(--r) 0 0; }
+.tab svg.i { width: 18px; height: 18px; stroke-width: 2; }
+.tab.over { background: var(--brick); color: #fff; }
+.tab.due { background: var(--plate); color: var(--chalk); margin-left: 2px; }
+.plate { position: relative; z-index: 1; display: grid; background: var(--plate); color: var(--chalk); border-radius: var(--r); border-top-right-radius: 0; padding: 4px 4px 0; }
+:root:not([data-ph]) .plate { grid-template-columns: 1fr 1fr; padding: 4px; }
+.plate.one { grid-template-columns: 1fr !important; }
+.slot { position: relative; padding: 10px 12px 12px; min-width: 0; container-type: inline-size; }
+.label { position: relative; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font: 500 20px/1.2 var(--sign); }
+.label > b { font-size: 24px; font-weight: 600; }
+.label > span { display: flex; gap: 12px; white-space: nowrap; }
+.label > span b { font-weight: 600; }
+.code { position: relative; font: 600 min(92px, calc(100cqi / 3.72))/1 var(--sign); white-space: nowrap; }
+.cap { position: relative; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 12px; font-weight: 500; }
+.cap b { font-weight: 600; }
+.now { background: var(--yellow); color: var(--on-yellow); border-radius: 3px; overflow: hidden; }
+.now .code { font-size: min(120px, calc(100cqi / 2.6)); line-height: .94; margin-top: 2px; }
+.now.out { background: var(--socket); color: var(--chalk); }
+.now.out .code { font-size: min(72px, calc(100cqi / 2.6)); margin-block: 2px 4px; }
+.now.out .label > span, .now.out .cap, .next .label > span, .next .cap > span { color: var(--chalk-muted); }
+.next.exam { background: var(--slab); color: var(--slab-ink); border-radius: 3px; margin-top: 4px; margin-bottom: 4px; }
+.next.exam .label > span, .next.exam .cap > span { color: var(--slab-muted); }
+.spent { position: absolute; inset: 0 auto 0 0; background: var(--yellow-spent); }
+.foldline { padding: 8px 12px 0; font: 600 22px/1.2 var(--sign); color: var(--chalk); }
+.foldline span { font-weight: 500; color: var(--chalk-muted); margin-left: 8px; }
+.ruler { position: relative; margin-top: 8px; }
+.r-lane { position: relative; height: 26px; margin-top: 26px; }
+.r-lane::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1.5px; background: var(--line); }
+.r-tag { position: absolute; top: -26px; transform: translateX(-50%); height: 23px; padding: 0 6px; font: 600 18px/23px var(--sign); background: var(--ink); color: var(--paper); border-radius: 3px; }
+.r-under { position: relative; height: 44px; margin-top: 4px; font: 500 16px/22px var(--sign); }
+.r-under span { position: absolute; white-space: nowrap; }
+.r-under b { display: block; font-weight: 600; }
+.r-under .past { color: var(--muted); }
+.r-empty { padding: 8px 2px 0; color: var(--muted); font-weight: 500; }
+.cols { display: grid; gap: 24px; margin-top: 16px; }
+:root:not([data-ph]) .cols { grid-template-columns: 1fr 1fr; gap: 36px; }
+.col { min-width: 0; padding-inline: 4px; }
+.head { display: flex; align-items: flex-end; border-bottom: 3px solid var(--plate); }
+.head h2 { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; font: 600 23px/1 var(--sign); background: var(--plate); color: var(--chalk); border-radius: var(--r) var(--r) 0 0; }
+.head h2 .n { font-weight: 500; color: var(--chalk-muted); }
+.trow { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 4px; align-items: center; min-height: 60px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.t-link { min-width: 0; }
+.t-title { display: block; font-size: 17px; font-weight: 500; line-height: 1.3; }
+.t-sub { display: block; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t-sub b { font: 600 18px/1 var(--sign); color: var(--ink); margin-right: 3px; }
+.trow.done .t-title { color: var(--muted); text-decoration: line-through; }
+.due { text-align: right; line-height: 1.2; white-space: nowrap; font: 500 21px/1.2 var(--sign); }
+.due small { display: block; font: 400 16px/1.2 var(--text); color: var(--muted); }
+.due.l1 { font-weight: 600; }
+.due.l0 small { color: var(--alert); font-weight: 500; }
+.erow { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 10px; width: 100%; min-height: 62px; padding: 9px 0 10px; border-bottom: 1px solid var(--line); }
+.erow time { font: 500 19px/1.2 var(--sign); color: var(--muted); }
+.erow time b { display: block; font-weight: 600; color: var(--ink); }
+.room { font: 600 27px/1.1 var(--sign); white-space: nowrap; margin-right: 8px; }
+.kind { font-weight: 500; white-space: nowrap; }
+.sub { display: block; color: var(--muted); }
+.sub b { font: 600 18px/1 var(--sign); color: var(--ink); margin-right: 3px; }
+.erow.past time b, .erow.past .room, .erow.past .kind, .erow.past .sub b { color: var(--muted); }
+.gaprow { padding: 10px 0 10px 62px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--line); }
+.slabh { display: inline-flex; align-items: center; height: 34px; margin-top: 12px; padding: 0 12px; font: 600 21px/1 var(--sign); background: var(--slab); color: var(--slab-ink); border-radius: var(--r) var(--r) 0 0; vertical-align: bottom; }
+.slab { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; width: 100%; padding: 11px 12px 12px; background: var(--slab); color: var(--slab-ink); border-radius: 0 var(--r) var(--r) var(--r); }
+.slab time { font: 500 19px/1.2 var(--sign); color: var(--slab-muted); }
+.slab time b { display: block; font-weight: 600; color: var(--slab-ink); }
+.slab .room { display: block; font-size: 36px; line-height: 1; }
+.slab .kind { display: block; font: 600 23px/1.15 var(--sign); margin-top: 4px; }
+.slab .sub, .slab .prep { color: var(--slab-muted); }
+.slab .sub b { color: var(--slab-ink); }
+.none { padding: 16px 0; color: var(--muted); font-size: 17px; }
+
+/* This week, three homes */
+.wk { margin-top: 26px; }
+.wk-h { font: 600 26px/1.1 var(--sign); padding: 0 4px 6px; }
+.wk-rows > button { display: grid; grid-template-columns: 60px minmax(0, 1fr) auto; gap: 8px; width: 100%; align-items: center; min-height: 56px; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+.wk-rows > button:hover { background: var(--press); }
+.wk-d { font: 500 17px/1.1 var(--sign); color: var(--muted); }
+.wk-d b { display: block; font: 600 21px/1.1 var(--sign); color: var(--ink); }
+.wk-bar { position: relative; height: 14px; }
+.wk-bar::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--line); }
+.wk-bar i { position: absolute; top: 1px; bottom: 1px; border-radius: 2px; background: var(--seg); }
+.wk-bar i.ex { background: var(--slab); top: -2px; bottom: -2px; }
+.wk-bar i.past { background: var(--seg-past); }
+.wk-bar i.live { background: var(--yellow); box-shadow: inset 0 0 0 1px var(--live-edge); }
+.wk-m { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; font: 600 18px/1.1 var(--sign); white-space: nowrap; }
+.wk-note { font: 500 17px/1.2 var(--sign); color: var(--muted); padding-top: 2px; }
+.wk-note b { color: var(--ink); font-weight: 600; }
+:root:not([data-ph]) .wk-rows { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0 10px; }
+:root:not([data-ph]) .wk-rows > button { display: flex; flex-direction: column; align-items: stretch; gap: 6px; border-bottom: 0; border-top: 3px solid var(--line); padding: 8px 4px; min-height: 120px; }
+:root:not([data-ph]) .wk-rows .wk-m { align-items: flex-start; }
+[data-ph] .top:has(.sw) { flex-wrap: wrap; gap: 8px; }
+[data-ph] .top .sw { width: 100%; margin: 0; }
+[data-ph] .top .sw button { flex: 1; text-align: center; }
+[data-ph] .top:has(.sw) + .route:has(.tab) { margin-top: 46px; }
+.sw { display: flex; padding: 3px; gap: 2px; border-radius: var(--r); background: var(--press); margin-left: auto; }
+.sw button { height: 38px; padding: 0 12px; border-radius: 4px; font: 600 19px/1 var(--sign); color: var(--muted); }
+.sw button[aria-pressed=true] { background: var(--ink); color: var(--paper); }
+.big { display: grid; gap: 2px; width: 100%; padding: 14px 16px 16px; background: var(--slab); color: var(--slab-ink); border-radius: var(--r); }
+.big .w { font: 600 22px/1 var(--sign); }
+.big .c { font: 600 60px/1 var(--sign); }
+.big .s { color: var(--slab-muted); }
+.big .s b { font: 600 18px/1 var(--sign); color: var(--slab-ink); }
+.wg { display: grid; gap: 2px; }
+:root:not([data-ph]) .wg { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 36px; }
+.wgd { break-inside: avoid; }
+
+/* Round 3: the rotated week. The clock is one line through all seven days. */
+.wkl { position: relative; }
+.wkl .l-nowl { display: none; }
+.w-now { position: absolute; z-index: 3; top: 22px; bottom: 0; width: 2px; margin-left: -1px; background: var(--ink); }
+.w-now b { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); padding: 0 5px; background: var(--ink); color: var(--paper); font: 600 17px/21px var(--sign); border-radius: 3px; }
+.wkl .l-due { position: relative; z-index: 4; }
+.wkl .l-due .tk { padding-right: 6px; background: var(--paper); }
+.wkl .l-row.today .l-due .tk { background: var(--card); }
+
+/* Round 2: the title opens the little calendar */
+.jt { display: block; padding: 2px 8px 3px; margin: -2px -8px -3px; border-radius: var(--r); font: inherit; }
+.jt:hover, .jt[aria-expanded=true] { background: var(--press); }
+.jt i { font-style: normal; font-size: 19px; color: var(--muted); margin-left: 5px; }
+#jscrim { position: fixed; z-index: 20; inset: 0; }
+[data-ph] #jscrim { background: rgb(0 0 0 / .45); }
+#jump { position: fixed; z-index: 21; left: 262px; top: 70px; width: 372px; padding: 10px 12px 12px; background: var(--sheet); border-radius: var(--r); box-shadow: 0 0 0 1px var(--line), 0 12px 32px rgb(0 0 0 / .35); }
+[data-ph] #jump { left: 0; right: 0; top: auto; bottom: 0; width: auto; padding: 12px 12px max(14px, env(safe-area-inset-bottom)); border-radius: 12px 12px 0 0; box-shadow: 0 -1px 0 var(--plate); }
+[data-frame=phone] #jump { left: 50%; right: auto; width: 390px; transform: translateX(-50%); }
+.j-y { display: flex; align-items: center; justify-content: space-between; }
+.j-y b { font: 600 28px/1 var(--sign); }
+.j-ms { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; margin: 6px 0 8px; }
+.j-ms button { height: 38px; border-radius: 4px; text-align: center; font: 600 18px/1 var(--sign); color: var(--muted); }
+.j-ms button:hover { background: var(--press); }
+.j-ms button.cur { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.j-ms button[aria-pressed=true] { background: var(--ink); color: var(--paper); text-decoration: none; }
+.jr { display: grid; grid-template-columns: 38px repeat(7, minmax(0, 1fr)); border-radius: 4px; }
+.jr.jh { font: 600 17px/24px var(--sign); color: var(--muted); text-align: center; }
+.jr.on { background: var(--line); }
+[data-view=week] .jr:not(.jh):hover { background: var(--press); }
+.jr button { height: 44px; display: grid; justify-items: center; align-content: center; border-radius: 4px; font: 600 20px/1 var(--sign); text-align: center; }
+.jr button:hover { box-shadow: inset 0 0 0 1.5px var(--box); }
+.jr .jw { font: 500 17px/1 var(--sign); color: var(--muted); }
+.jr .out { color: var(--muted); font-weight: 500; }
+.jr .tod span:first-child { padding: 0 5px; background: var(--plate); color: var(--chalk); border-radius: 3px; }
+.jr button[aria-pressed=true] { background: var(--ink); color: var(--paper); }
+.jr .marks { height: 7px; margin-top: 1px; }
+.jr .marks i { height: 3px; width: 12px; margin-top: 2px; background: currentColor; }
+.j-f { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; color: var(--muted); }
+.j-f button { height: 44px; padding: 0 12px; border-radius: var(--r); font: 600 19px/1 var(--sign); color: var(--ink); background: var(--press); }
+
+/* Round 2: Day, four ways */
+.d-lane { margin: 2px 0 6px; }
+.d-lane .e { display: block !important; }
+.e.sel { outline: 2px solid var(--ink); outline-offset: 2px; }
+.d-gap { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font: 500 17px/1 var(--sign); color: var(--muted); white-space: nowrap; }
+.d-sub { margin-top: 14px; }
+.f { display: grid; gap: 14px; margin-top: 12px; }
+:root:not([data-ph]) .f { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 28px; }
+.f-c { padding: 12px 16px 14px; background: var(--card); border-radius: var(--r); box-shadow: inset 0 0 0 1px var(--line); }
+.f-c.ex { background: var(--slab); color: var(--slab-ink); box-shadow: none; }
+.f-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; font: 600 21px/1.2 var(--sign); }
+.f-room { font: 600 52px/1.05 var(--sign); margin-top: 4px; }
+.f-sub { font-weight: 500; }
+.f-sub b { font: 600 19px/1 var(--sign); margin-right: 3px; }
+.f-more { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); }
+.f-c.ex .f-more { border-color: var(--slab-muted); color: var(--slab-muted); }
+.pp { display: grid; gap: 12px; margin-top: 4px; }
+:root:not([data-ph]) .pp { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }
+:root:not([data-ph]) .p-due { grid-column: 1 / -1; }
+.p-c { padding: 8px 14px 8px; background: var(--card); border-radius: var(--r); box-shadow: inset 0 0 0 1px var(--line); }
+.p-c h2 { font: 600 23px/1.2 var(--sign); padding-bottom: 3px; }
+.p-c h2 small { font: 500 17px/1 var(--sign); color: var(--muted); margin-left: 6px; }
+.p-c .b-row:last-child, .p-c .b-tk:last-child { border-bottom: 0; }
+.p-gap { padding: 7px 0; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--line); }
+:root:not([data-ph]) .p-due .tasks2 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 28px; }
+.near .l-row.dim .l-due { display: none; }
+.near .l-row.dim { opacity: .62; }
+.near .l-row.dim:hover { opacity: 1; }
+.near .l-row.focus { background: var(--card); box-shadow: inset 0 2px 0 var(--ink), inset 0 -2px 0 var(--ink); }
+
+/* the drawer: same pattern as the Subject page */
+#scrim { position: fixed; z-index: 20; inset: 0; background: rgb(0 0 0 / .45); }
+#drawer { position: fixed; z-index: 21; inset: 90px 0 0 0; overflow-y: auto; padding: 12px 16px 96px; background: var(--paper); border-radius: 12px 12px 0 0; box-shadow: 0 -1px 0 var(--plate); }
+[data-frame=phone] #drawer { left: 50%; width: 390px; transform: translateX(-50%); }
+:root:not([data-ph]) #drawer { inset: 0 0 0 auto; width: 480px; padding: 16px 24px; border-radius: 0; box-shadow: -1px 0 0 var(--plate); }
+.dclose { width: 44px; height: 44px; margin-left: -10px; font: 500 28px/1 var(--text); text-align: center; }
+.d-k { font: 600 21px/1.2 var(--sign); color: var(--muted); }
+.d-t { font: 600 38px/1.05 var(--sign); margin: 2px 0 10px; }
+.d-rows { display: grid; gap: 6px; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.d-rows div { display: grid; grid-template-columns: 90px minmax(0, 1fr); }
+.d-rows span { color: var(--muted); }
+.count { display: flex; align-items: baseline; gap: 10px; margin: 16px 0 8px; font: 600 42px/1 var(--sign); }
+.count small { font: 500 21px/1 var(--sign); color: var(--muted); }
+.prepbar { display: flex; gap: 3px; margin-bottom: 8px; }
+.prepbar i { flex: 1; height: 7px; border-radius: 1px; background: var(--line); }
+.prepbar i.on { background: var(--seg); }
+
+/* the prototype bar: deliberately not part of the design being judged */
+#bar { position: fixed; z-index: 30; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 8px; width: max-content; max-width: calc(100vw - 16px); padding: 4px 8px; background: var(--proto); color: var(--proto-ink); border-radius: 10px; font: 500 15px/1 system-ui, sans-serif; box-shadow: 0 4px 18px rgb(0 0 0 / .4); }
+[data-ph] #bar { bottom: 84px; }
+#bar button { min-width: 32px; min-height: 32px; padding: 0 7px; text-align: center; border-radius: 6px; }
+#bar button:hover { background: rgb(255 255 255 / .12); }
+#bar button[aria-pressed=true] { color: var(--proto); background: var(--proto-on); font-weight: 600; }
+#bar .name { min-width: 120px; font-weight: 600; text-align: center; white-space: nowrap; }
+#bar .grp { display: flex; align-items: center; gap: 1px; }
+#bar.tucked .grp:not(.keep) { display: none; }
+[data-shot] #bar { display: none; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+  <symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="calendar" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></symbol>
+  <symbol id="book" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7ZM14 2v4a2 2 0 0 0 2 2h4M16 13H8M16 17H8M10 9H8"/></symbol>
+  <symbol id="alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3M12 9v4M12 17h.01"/></symbol>
+</defs></svg>
+<div class="app">
+  <aside class="rail">
+    <div class="mark">Chronos</div>
+    <button class="add" type="button"><svg class="i"><use href="#plus"/></svg>Add</button>
+    <nav aria-label="Main" id="railnav"></nav>
+  </aside>
+  <main id="page"></main>
+  <nav class="dock" aria-label="Main" id="dock"></nav>
+</div>
+<div id="overlay"></div>
+<div id="bar"></div>
+
+<script>
+/* ---------- dates, all plain strings so no time zone can interfere ---------- */
+const pad = n => String(n).padStart(2, '0');
+const D = s => new Date(s + 'T00:00:00Z');
+const iso = d => d.toISOString().slice(0, 10);
+const add = (s, n) => { const d = D(s); d.setUTCDate(d.getUTCDate() + n); return iso(d); };
+const dow = s => (D(s).getUTCDay() + 6) % 7;
+const mon = s => add(s, -dow(s));
+const hm = m => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
+const dayN = s => D(s).getUTCDate();
+const WD = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const MN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const mName = s => MN[D(s).getUTCMonth()];
+const diff = (a, b) => Math.round((D(b) - D(a)) / 864e5);
+const SEM0 = '2026-09-21';
+const teachWeek = s => Math.floor(diff(SEM0, s) / 7) + 1;
+
+/* ---------- sample data, invented but shaped like a real FIT week ---------- */
+const SUB = { 'BI-OSY': 'Operační systémy', 'BI-PSI': 'Počítačové sítě', 'BI-AAG': 'Automaty a gramatiky', 'BI-SP1': 'Softwarový projekt 1', 'BI-ZUM': 'Základy umělé inteligence' };
+const HOL = { '2026-09-28': 'Statehood Day', '2026-10-28': 'Independence Day', '2026-11-17': 'Freedom Day' };
+const PATTERN = [
+  [0, 555, 645, 'BI-AAG', 'Tutorial', 'T9:301'], [0, 765, 855, 'BI-ZUM', 'Lecture', 'TH:A-1242'],
+  [1, 555, 645, 'BI-ZUM', 'Lab', 'T9:348'], [1, 870, 960, 'BI-OSY', 'Lab', 'T9:350'],
+  [2, 660, 750, 'BI-PSI', 'Lecture', 'TH:A-1442'], [2, 975, 1065, 'BI-AAG', 'Tutorial', 'T9:302'],
+  [3, 555, 645, 'BI-OSY', 'Lecture', 'TH:A-1242'], [3, 660, 750, 'BI-PSI', 'Lab', 'T9:350'], [3, 870, 960, 'BI-AAG', 'Lecture', 'TH:A-1442'],
+  [4, 780, 870, 'BI-SP1', 'Tutorial', 'T9:105'],
+];
+const EV = [];
+for (let w = SEM0; w < '2026-12-21'; w = add(w, 7)) PATTERN.forEach(([d, from, to, s, kind, room]) => {
+  const day = add(w, d);
+  if (!HOL[day]) EV.push({ id: 'e' + EV.length, day, from, to, s, kind, room, src: 'Sirius' });
+});
+const one = (o) => { const e = { id: 'x' + EV.length, src: 'Sirius', ...o }; EV.push(e); return e; };
+one({ day: '2026-11-05', from: 975, to: 1020, s: 'BI-SP1', kind: 'Assessment', title: 'Project presentation', room: 'T9:105' });
+const MID = one({ day: '2026-11-06', from: 540, to: 630, s: 'BI-ZUM', kind: 'Exam', title: 'Midterm exam', room: 'TH:A-1242', exam: true });
+const FIN = one({ day: '2026-11-18', from: 840, to: 960, s: 'BI-AAG', kind: 'Exam', title: 'Midterm exam', room: 'T9:107', exam: true });
+one({ day: '2026-11-04', from: 1020, to: 1080, s: 'BI-SP1', kind: 'Course event', title: 'Team meeting', room: 'T9:105', src: null });
+one({ day: '2026-11-10', from: 1020, to: 1065, kind: 'Own', title: 'Dentist', src: null });
+one({ day: '2026-11-26', from: 870, to: 960, s: 'BI-SP1', kind: 'Assessment', title: 'Project review', room: 'T9:105' });
+EV.find(e => e.day === '2026-11-13' && e.s === 'BI-SP1').cancelled = true;
+
+const T = [
+  { title: 'Homework 3', s: 'BI-OSY', d: '2026-11-04', t: 1439, src: 'Moodle' },
+  { title: 'Lab report', s: 'BI-PSI', d: '2026-11-05', t: 1439, src: 'Moodle' },
+  { title: 'Finish the slides', s: 'BI-SP1', d: '2026-11-06' },
+  { title: 'Problem set 5', s: 'BI-AAG', d: '2026-11-09' },
+  { title: 'Quiz 4', s: 'BI-ZUM', d: '2026-11-11', t: 1439, src: 'Moodle' },
+  { title: 'Renew library card', d: '2026-11-12' },
+  { title: 'Homework 4', s: 'BI-OSY', d: '2026-11-18', t: 1439, src: 'Moodle' },
+  { title: 'Report draft', s: 'BI-SP1', d: '2026-11-27' },
+  { title: 'Past paper 2024', s: 'BI-ZUM', d: '2026-11-03', prep: MID.id, done: true },
+  { title: 'Search algorithms summary', s: 'BI-ZUM', d: '2026-11-04', prep: MID.id, done: true },
+  { title: 'Go over Lab 6', s: 'BI-ZUM', d: '2026-11-05', prep: MID.id },
+  { title: 'Read chapters 1 to 4', s: 'BI-AAG', d: '2026-11-08', prep: FIN.id, done: true },
+  { title: 'Pumping lemma examples', s: 'BI-AAG', d: '2026-11-12', prep: FIN.id },
+  { title: 'Past paper 2025', s: 'BI-AAG', d: '2026-11-15', prep: FIN.id },
+  { title: 'Ask about question 7', s: 'BI-AAG', d: '2026-11-16', prep: FIN.id },
+].map((t, i) => ({ id: 't' + i, ...t }));
+
+/* ---------- state ---------- */
+const CLOCK = { live: ['2026-11-05', 700], free: ['2026-11-05', 785], evening: ['2026-11-05', 1150], weekend: ['2026-11-07', 630] };
+const CALV = { a: 'Grid', b: 'Lanes', c: 'Board' };
+const TODV = { a: 'Week below', b: 'Today | Week', c: 'Week strip' };
+const S = { s: 'cal', v: 'a', view: 'week', st: 'live', f: '', theme: 'dark', kinds: 'word', q: 'fold', tw: 'today', dv: 'b', round: '2', j: null, sel: null, at: null, pick: null, open: null, tuck: false };
+const now = () => ({ d: CLOCK[S.st][0], t: CLOCK[S.st][1] });
+const isPh = () => S.f === 'phone' || innerWidth < 900;
+const T0 = 480, T1 = 1200, SPAN = T1 - T0;
+const dayEv = d => EV.filter(e => e.day === d).sort((a, b) => a.from - b.from);
+const dayT = d => T.filter(t => t.d === d);
+const status = e => { const n = now(); if (e.cancelled) return 'cx'; if (e.day < n.d || (e.day === n.d && e.to <= n.t)) return 'past'; if (e.day === n.d && e.from <= n.t) return 'live'; return 'up'; };
+const overdue = t => { const n = now(); return !t.done && (t.d < n.d || (t.d === n.d && t.t && t.t < n.t)); };
+const rel = d => { const k = diff(now().d, d); return k === 0 ? 'Today' : k === 1 ? 'Tomorrow' : k < 0 ? (k === -1 ? 'Yesterday' : -k + ' days ago') : 'In ' + k + ' days'; };
+const short = e => e.s ? e.s.replace(/^[A-Z]+-/, '') : e.title;
+const label = e => e.s || e.title;
+const kindWord = e => e.title && e.kind !== 'Own' ? e.title : e.kind === 'Own' ? '' : e.kind;
+const kcls = e => 'k-' + e.kind.split(' ')[0].toLowerCase();
+const prepOf = e => T.filter(t => t.prep === e.id);
+const prepLeft = e => prepOf(e).filter(t => !t.done).length;
+
+/* lay overlapping Events side by side */
+function pack(list) {
+  const out = list.filter(e => !e.hide).map(e => ({ e, c: 0, n: 1 }));
+  out.forEach((a, i) => { const hit = out.slice(0, i).filter(b => b.e.to > a.e.from); while (hit.some(b => b.c === a.c)) a.c++; });
+  out.forEach(a => { const g = out.filter(b => b.e.from < a.e.to && b.e.to > a.e.from); a.n = Math.max(...g.map(b => b.c)) + 1; });
+  return out;
+}
+const tick = t => `<label class="box"><input type="checkbox" data-tick="${t.id}" aria-label="${t.title}"${t.done ? ' checked' : ''}><b><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></b></label>`;
+const tk = t => `<span class="tk${t.done ? ' done' : ''}${overdue(t) ? ' over' : ''}">${tick(t)}<button type="button" data-open="t:${t.id}">${t.title}</button></span>`;
+const alert = '<svg class="i"><use href="#alert"/></svg>';
+
+function block(e, style, axis, big, half) {
+  const st = status(e), n = now();
+  let fill = '';
+  if (st === 'live') { const p = (n.t - e.from) / (e.to - e.from) * 100; fill = `<i class="fill" style="${axis === 'y' ? `width:100%;height:${p}%` : `height:100%;width:${p}%`}"></i>`; }
+  const ph = isPh();
+  let body;
+  if (big === 'bare') body = '';
+  else if (ph && !big && axis === 'x') body = `<span><b>${short(e)}</b></span>`;
+  else if (ph && (!big || big === 'mid')) body = `<span><b>${short(e)}</b></span>` + (e.exam ? '<span>Exam</span>' : e.kind !== 'Own' ? `<span>${e.kind === 'Course event' ? 'Event' : e.kind === 'Assessment' ? 'Assess.' : e.kind}</span>` : '');
+  else body = `<span><b>${label(e)}</b> ${e.cancelled ? 'Cancelled' : e.kind === 'Own' ? '' : kindWord(e)}</span>` + (e.room ? `<span>${e.room}${axis === 'x' && e.exam && st !== 'past' ? ', ' + rel(e.day) : ''}</span>` : '') + (axis === 'y' && e.exam && st !== 'past' ? `<span>${rel(e.day)}${prepLeft(e) ? ', ' + prepLeft(e) + ' prep left' : ''}</span>` : '');
+  return `<button type="button" class="e ${st} ${kcls(e)}${e.exam ? ' exam' : ''}${half ? ' half' : ''}" style="${style}" data-open="e:${e.id}" aria-label="${label(e)} ${e.kind} ${hm(e.from)}">${fill}${body}</button>`;
+}
+
+/* ---------- A: Grid ---------- */
+function columns(days, big) {
+  const ph = isPh(), n = now(), hourPx = ph ? (big ? 52 : 46) : Math.max(50, Math.floor((innerHeight - (big ? 170 : 215)) / 11)), H = SPAN / 60 * hourPx;
+  const tracks = days.map(d => dow(d) > 4 && !dayEv(d).length && !big ? (ph ? '26px' : '.45fr') : 'minmax(0,1fr)').join(' ');
+  const lab = ph ? '30px' : '48px';
+  let h = `<div class="g" style="grid-template-columns:${lab} ${tracks}"><div></div>`;
+  days.forEach(d => {
+    const narrow = dow(d) > 4 && !dayEv(d).length && ph;
+    h += `<button type="button" class="g-head${d === n.d ? ' today' : ''}" data-day="${d}"${narrow ? ' style="padding-inline:2px"' : ''}>${WD[dow(d)].slice(0, narrow ? 1 : ph ? 2 : 3)}<b>${dayN(d)}</b></button>`;
+  });
+  /* the Due row sits above the time grid, because a deadline is a moment and not a span */
+  if (!(big && ph)) {
+    h += `<div class="g-lab">${ph ? '' : 'Due'}</div>`;
+    days.forEach(d => {
+      const ts = dayT(d).filter(t => !t.prep || !t.done);
+      if (ph && !big) {
+        const open = ts.filter(t => !t.done), o = open.filter(overdue).length;
+        h += `<div class="g-due" style="padding:3px;min-height:26px">${open.length ? `<button type="button" data-day="${d}" class="cnt${o ? ' over' : ''}"><i></i>${open.length}</button>` : ''}</div>`;
+      } else h += `<div class="g-due" style="min-height:38px">${ts.map(tk).join('')}</div>`;
+    });
+  }
+  h += `<div class="g-hours" style="height:${H}px">`;
+  for (let m = T0 + 60; m < T1; m += 60) h += `<span style="top:${(m - T0) / SPAN * 100}%">${ph ? m / 60 : hm(m)}</span>`;
+  if (days.includes(n.d) && n.t >= T0 && n.t <= T1 && !ph) h += `<span class="nowt" style="top:${(n.t - T0) / SPAN * 100}%">${hm(n.t)}</span>`;
+  h += '</div>';
+  days.forEach(d => {
+    let c = `<div class="g-col${d === n.d ? ' today' : ''}${HOL[d] ? ' hol' : ''}" style="height:${H}px">`;
+    for (let m = T0 + 60; m < T1; m += 60) c += `<i class="g-hr" style="top:${(m - T0) / SPAN * 100}%"></i>`;
+    if (HOL[d]) c += `<span class="holname">${ph ? '' : HOL[d]}</span>`;
+    pack(dayEv(d)).forEach(({ e, c: k, n: m }) => {
+      const stagger = ph && !big && m > 1, w = 100 / m;
+      const x = stagger ? `left:calc(${k * 30}% + 2px);width:calc(70% - 4px);z-index:${k + 1}` : `left:calc(${k * w}% + 2px);width:calc(${w}% - 4px)`;
+      c += block(e, `top:${(e.from - T0) / SPAN * 100}%;height:calc(${(e.to - e.from) / SPAN * 100}% - 2px);${x}`, 'y', big, ph && !big && (stagger || e.to - e.from < 60));
+    });
+    if (d === n.d && n.t >= T0 && n.t <= T1) c += `<div class="nowl" style="top:${(n.t - T0) / SPAN * 100}%"></div>`;
+    h += c + '</div>';
+  });
+  return h + '</div>';
+}
+function monthDays(at) {
+  const first = at.slice(0, 8) + '01', start = mon(first), out = [];
+  for (let d = start; ; d = add(d, 1)) { out.push(d); if (out.length % 7 === 0 && add(d, 1).slice(0, 7) > at.slice(0, 7)) break; }
+  return out;
+}
+const isRoutine = e => !e.title && !e.cancelled;
+function monthBig(at) {
+  const n = now(), mo = at.slice(0, 7);
+  let h = '<div class="m">' + WD.map(w => `<div class="m-wd">${w.slice(0, 3)}</div>`).join('');
+  monthDays(at).forEach(d => {
+    const evs = dayEv(d), rare = evs.filter(e => !isRoutine(e)), routine = evs.length - rare.length, ts = dayT(d).filter(t => !t.done);
+    let c = `<button type="button" class="m-d${d.slice(0, 7) !== mo ? ' other' : ''}${d === n.d ? ' today' : ''}" data-day="${d}"><span class="m-n">${dayN(d)}</span>`;
+    if (HOL[d]) c += `<span class="m-l q">${HOL[d]}</span>`;
+    rare.forEach(e => c += e.exam ? `<span class="m-l ex">${e.s} Exam</span>` : `<span class="m-l one">${hm(e.from)} ${e.cancelled ? '<s>' + label(e) + '</s>' : e.title}</span>`);
+    ts.slice(0, 2).forEach(t => c += `<span class="m-l tkm${overdue(t) ? ' over' : ''}">${t.title}</span>`);
+    if (ts.length > 2) c += `<span class="m-l q">${ts.length - 2} more due</span>`;
+    if (routine) c += `<span class="m-l q">${routine} ${routine === 1 ? 'class' : 'classes'}</span>`;
+    h += c + '</button>';
+  });
+  return h + '</div>';
+}
+function marks(d) {
+  const evs = dayEv(d), ts = dayT(d).filter(t => !t.done);
+  return `<span class="marks">${evs.some(e => e.exam) ? '<i class="ex"></i>' : evs.length ? '<i class="ev"></i>' : ''}${ts.some(overdue) ? '<i class="ov"></i>' : ts.length ? '<i class="tk2"></i>' : ''}</span>`;
+}
+function monthSmall(at, sel) {
+  const n = now(), mo = at.slice(0, 7);
+  let h = '<div class="m mm">' + WD.map(w => `<div class="m-wd" style="text-align:center;padding-inline:0">${w.slice(0, 2)}</div>`).join('');
+  monthDays(at).forEach(d => { h += `<button type="button" class="m-d${d.slice(0, 7) !== mo ? ' other' : ''}${d === n.d ? ' today' : ''}${d === sel ? ' sel' : ''}" data-pick="${d}"><span class="m-n">${dayN(d)}</span>${marks(d)}</button>`; });
+  return h + '</div>';
+}
+
+/* ---------- B: Lanes ---------- */
+function laneRow(d, lh, big) {
+  const n = now(), ph = isPh(), evs = dayEv(d), ts = dayT(d).filter(t => !t.prep || !t.done), quiet = !evs.length && !HOL[d];
+  let inner = HOL[d] ? `<span class="l-hol">${HOL[d]}</span>` : '';
+  pack(evs).forEach(({ e, c, n: m }) => {
+    inner += block(e, `left:${(e.from - T0) / SPAN * 100}%;width:calc(${(e.to - e.from) / SPAN * 100}% - 2px);top:${c / m * 100}%;height:calc(${100 / m}% - ${m > 1 ? 1 : 0}px)`, 'x', big, m > 1);
+  });
+  if (d === n.d && n.t >= T0 && n.t <= T1) inner += `<i class="l-nowl" style="left:${(n.t - T0) / SPAN * 100}%"></i>`;
+  return `<div class="l-row${d === n.d ? ' today' : ''}${quiet ? ' quiet' : ''}" style="--lh:${lh}px"><button type="button" class="l-day" data-day="${d}">${WD[dow(d)].slice(0, 3)}<b>${dayN(d)}</b></button><div class="l-lane">${inner}</div>${ts.length ? `<div class="l-due">${ts.map(tk).join('')}</div>` : ''}</div>`;
+}
+function scale(tag) {
+  const ph = isPh(); let h = '<div class="l-scale">';
+  for (let m = T0; m < T1; m += ph ? 120 : 60) if (tag == null || m <= tag - (ph ? 75 : 35) || m >= tag + (ph ? 45 : 15)) h += `<span style="left:${(m - T0) / SPAN * 100}%">${ph ? m / 60 : hm(m)}</span>`;
+  return h + '</div>';
+}
+function lanesWeek(at) {
+  const ph = isPh(), w = mon(at);
+  return `<div style="--lw:${ph ? '46px' : '64px'}">${scale()}${[0, 1, 2, 3, 4, 5, 6].map(i => laneRow(add(w, i), ph ? 36 : Math.max(54, Math.min(84, Math.floor((innerHeight - 330) / 5))))).join('')}</div>`;
+}
+function lanesMonth(at) {
+  const n = now(), mo = at.slice(0, 7); let h = `<div class="lm" style="--lw:62px">${scale()}`, wk = null;
+  for (let d = mo + '-01'; d.slice(0, 7) === mo; d = add(d, 1)) {
+    if (mon(d) !== wk) { wk = mon(d); h += `<div class="l-wk">Week ${teachWeek(d)}</div>`; }
+    const evs = dayEv(d), ts = dayT(d).filter(t => !t.done);
+    let inner = HOL[d] ? `<span class="l-hol" style="font-size:16px">${HOL[d]}</span>` : '';
+    pack(evs).forEach(({ e, c, n: m }) => inner += block(e, `left:${(e.from - T0) / SPAN * 100}%;width:calc(${(e.to - e.from) / SPAN * 100}% - 1px);top:${c / m * 100}%;height:${100 / m}%`, 'x', 'bare'));
+    if (ts.length) inner += `<span class="l-tick${ts.some(overdue) ? ' over' : ''}"><span class="cnt${ts.some(overdue) ? ' over' : ''}"><i></i>${ts.length}</span></span>`;
+    h += `<div class="l-row${d === n.d ? ' today' : ''}"><button type="button" class="l-day" data-day="${d}"><b>${dayN(d)}</b>${WD[dow(d)].slice(0, 2)}</button><div class="l-lane">${inner}</div></div>`;
+  }
+  return h + '</div>';
+}
+
+/* ---------- C: Board ---------- */
+function bRow(e) {
+  const st = status(e);
+  const right = st === 'live' ? '<span class="chip">Now</span>' : e.cancelled ? '<span class="word">Cancelled</span>' : e.exam && st !== 'past' && diff(now().d, e.day) > 1 ? `<span class="word">${rel(e.day)}</span>` : '';
+  return `<button type="button" class="b-row ${st}${e.exam && st !== 'past' ? ' exam' : ''}" data-open="e:${e.id}"><span class="b-t">${hm(e.from)}<small>${hm(e.to)}</small></span><span class="b-m"><b>${e.room || e.title}</b><em>${e.room ? kindWord(e) : ''}</em>${e.s ? `<span><b>${e.s}</b>${SUB[e.s]}</span>` : ''}</span>${right}</button>`;
+}
+function bTask(t) { return `<div class="b-tk">${tk(t)}${overdue(t) ? `<span class="flag">${alert}Overdue</span>` : t.s ? `<span class="sub">${t.s}</span>` : ''}</div>`; }
+function bDay(d, head = true) {
+  const n = now(), evs = dayEv(d), ts = dayT(d).filter(t => !t.prep || !t.done);
+  const pastDay = d < n.d;
+  let h = head ? `<h2 class="b-h${pastDay ? ' past' : ''}">${WD[dow(d)]} <small>${dayN(d)} ${mName(d).slice(0, 3)}</small>${d === n.d ? '<span class="rel" id="todayh">Today</span>' : ''}</h2>` : '';
+  if (HOL[d]) h += `<p class="b-none">${HOL[d]}, no classes</p>`;
+  else if (!evs.length && !ts.length) h += '<p class="b-none">Nothing scheduled</p>';
+  return h + evs.map(bRow).join('') + ts.map(bTask).join('');
+}
+function board(at) {
+  const ph = isPh(), n = now(), w = mon(at), days = [0, 1, 2, 3, 4, 5, 6].map(i => add(w, i));
+  const sel = S.pick || at;
+  if (S.view === 'month') return `<div class="b"><div class="b-side">${monthSmall(at, sel)}</div><div>${bDay(sel)}</div></div>`;
+  const strip = `<div class="strip">${days.map(d => `<button type="button" data-pick="${d}" aria-pressed="${S.view === 'day' && d === at}" class="${d === n.d ? 'isnow' : ''}">${WD[dow(d)].slice(0, 2)}<b>${dayN(d)}</b>${marks(d)}</button>`).join('')}</div>`;
+  const open = days.flatMap(dayT).filter(t => !t.done);
+  /* finished days fold into one line, so the board opens on today */
+  const shown = days.filter(d => dow(d) < 5 || dayEv(d).length || dayT(d).some(t => !t.done) || d === n.d), gone = shown.filter(d => d < n.d);
+  const fold = gone.length && !S.earlier ? `<button type="button" class="b-fold" data-earlier>${WD[dow(gone[0])].slice(0, 3)} to ${WD[dow(gone[gone.length - 1])].slice(0, 3)} finished</button>` : '';
+  const list = S.view === 'day' ? bDay(at) : fold + shown.filter(d => S.earlier || d >= n.d).map(d => bDay(d)).join('');
+  if (ph) return strip + list;
+  return `<div class="b"><div class="b-side">${monthSmall(at, at)}<div><h2 class="sidehead">Due this week</h2>${open.map(bTask).join('') || '<p class="b-none">Nothing due</p>'}</div></div><div>${list}</div></div>`;
+}
+
+/* ---------- round 3: the rotated week ---------- */
+function weekRot(at) {
+  const ph = isPh(), n = now(), w = mon(at), here = n.d >= w && n.d <= add(w, 6) && n.t >= T0 && n.t <= T1;
+  const line = here ? '<i class="w-now" style="left:calc(var(--lw) + (100% - var(--lw)) * ' + ((n.t - T0) / SPAN) + ')"><b>' + hm(n.t) + '</b></i>' : '';
+  const lh = ph ? 44 : Math.max(54, Math.min(84, Math.floor((innerHeight - 330) / 5)));
+  return '<div class="wkl" style="--lw:' + (ph ? '46px' : '64px') + '">' + scale(here ? n.t : null) + [0, 1, 2, 3, 4, 5, 6].map(i => laneRow(add(w, i), lh)).join('') + line + '</div>';
+}
+
+/* ---------- round 2: Day, four ways ---------- */
+const DAYV = { a: 'Lanes', b: 'Focus', c: 'Parts', d: 'Neighbours' };
+const dayTasks = d => dayT(d).filter(t => !t.prep || !t.done);
+const evRows = d => dayEv(d).map(bRow).join('') || '<p class="b-none">' + (HOL[d] ? HOL[d] + ', no classes' : 'No Events') + '</p>';
+/* the lane zooms to the hours this day uses */
+function zoom(d) {
+  const e = dayEv(d); if (!e.length) return [480, 1080];
+  const lo = Math.floor(Math.min(...e.map(x => x.from)) / 60) * 60; let hi = Math.ceil(Math.max(...e.map(x => x.to)) / 60) * 60;
+  if (hi - lo < 360) hi = lo + 360;
+  return [lo, hi];
+}
+function dayLane(d, h, sel) {
+  const [lo, hi] = zoom(d), x = m => (m - lo) / (hi - lo) * 100, n = now(), ph = isPh(), real = dayEv(d).filter(e => !e.cancelled);
+  let tk2 = ''; for (let m = lo; m < hi; m += ph && hi - lo > 420 ? 120 : 60) tk2 += '<span style="left:' + x(m) + '%">' + (ph ? m / 60 : hm(m)) + '</span>';
+  let inner = HOL[d] ? '<span class="l-hol">' + HOL[d] + '</span>' : !real.length ? '<span class="l-hol">No Events</span>' : '';
+  pack(dayEv(d)).forEach(({ e, c, n: m }) => {
+    const st = 'left:' + x(e.from) + '%;width:calc(' + (x(e.to) - x(e.from)) + '% - 2px);top:' + (c / m * 100) + '%;height:calc(' + (100 / m) + '% - ' + (m > 1 ? 1 : 0) + 'px)';
+    inner += block(e, st, 'x', ph ? 'mid' : true, m > 1).replace('class="e ', 'class="e ' + (e.id === sel ? 'sel ' : ''));
+  });
+  real.forEach((e, i) => { const f = real[i + 1]; if (f && f.from - e.to >= 90) inner += '<span class="d-gap" style="left:' + x(e.to) + '%;width:' + (x(f.from) - x(e.to)) + '%">' + dur(f.from - e.to) + ' free</span>'; });
+  if (d === n.d && n.t >= lo && n.t <= hi) inner += '<i class="l-nowl" style="left:' + x(n.t) + '%"></i>';
+  return '<div class="l-scale" style="margin-left:0">' + tk2 + '</div><div class="l-lane d-lane" style="height:' + h + 'px;background-size:' + (6000 / (hi - lo)) + '% 100%">' + inner + '</div>';
+}
+function dayLanes(d) { return dayLane(d, isPh() ? 92 : 120) + '<div class="d-sub">' + dayTasks(d).map(bTask).join('') + evRows(d) + '</div>'; }
+function dayFocus(d) {
+  const n = now(), evs = dayEv(d), ph = isPh();
+  const sel = evs.find(e => e.id === S.sel) || evs.find(e => status(e) === 'live') || evs.find(e => status(e) === 'up') || evs[0];
+  const lane = dayLane(d, ph ? 84 : 96, sel && sel.id).replace(/data-open="e:/g, 'data-sel="');
+  if (!sel) return lane + '<div class="d-sub">' + dayTasks(d).map(bTask).join('') + '</div>';
+  const st = status(sel), when = st === 'live' ? '<span class="chip">Now</span>' : st === 'past' ? 'Finished' : st === 'cx' ? 'Cancelled' : sel.day === n.d ? 'In ' + dur(sel.from - n.t) : rel(sel.day);
+  const mine = sel.s ? T.filter(t => t.s === sel.s && !t.done).sort((a, b) => a.d.localeCompare(b.d)).slice(0, 3) : [];
+  const other = dayTasks(d).filter(t => !mine.includes(t) && !t.done), again = sel.title ? null : EV.find(e => e.s === sel.s && e.kind === sel.kind && !e.title && e.day > sel.day);
+  const p = prepOf(sel), more = t => '<p class="f-more">' + t + '</p>';
+  const card = '<section class="f-c' + (sel.exam && st !== 'past' ? ' ex' : '') + '"><div class="f-top"><span>' + hm(sel.from) + ' to ' + hm(sel.to) + '</span><span>' + when + '</span></div><div class="f-room">' + (sel.room || sel.title) + '</div><p class="f-sub">' + (sel.room ? kindWord(sel) : '') + '</p>'
+    + (sel.s ? '<p class="f-sub"><b>' + sel.s + '</b> ' + SUB[sel.s] + '</p>' : '')
+    + (st === 'live' ? more((sel.to - n.t) + ' min left') : '')
+    + (again ? more('Next ' + sel.kind + ': ' + WD[dow(again.day)] + ' ' + dayN(again.day) + ' ' + mName(again.day).slice(0, 3) + ', ' + again.room) : '')
+    + (p.length ? more('Prep ' + p.filter(t => t.done).length + ' of ' + p.length) : '') + '</section>';
+  const side = '<div>' + (mine.length ? '<h2 class="sidehead">Tasks for ' + sel.s + '</h2>' + mine.map(bTask).join('') : '')
+    + (other.length ? '<h2 class="sidehead" style="margin-top:14px">Also due this day</h2>' + other.map(bTask).join('') : '')
+    + (mine.length || other.length ? '' : '<p class="b-none">Nothing due</p>') + '</div>';
+  return lane + '<div class="f">' + card + side + '</div>';
+}
+const PARTS = [['Morning', 0, 720], ['Afternoon', 720, 1020], ['Evening', 1020, 1440]];
+function dayParts(d) {
+  const evs = dayEv(d), real = evs.filter(e => !e.cancelled), ts = dayTasks(d);
+  const due = ts.length ? '<section class="p-c p-due"><h2>Due<small>' + ts.filter(t => !t.done).length + '</small></h2><div class="tasks2">' + ts.map(bTask).join('') + '</div></section>' : '';
+  const parts = PARTS.map(([name, a, b]) => {
+    const list = evs.filter(e => e.from >= a && e.from < b);
+    const rows = list.map(e => { const i = real.indexOf(e), f = real[i + 1]; return bRow(e) + (i > -1 && f && f.from - e.to >= 60 && f.from < b ? '<p class="p-gap">' + hm(e.to) + ' to ' + hm(f.from) + ' free</p>' : ''); }).join('');
+    return '<section class="p-c"><h2>' + name + (list.length ? '<small>' + list.length + '</small>' : '') + '</h2>' + (rows || '<p class="b-none">Free</p>') + '</section>';
+  }).join('');
+  return (HOL[d] ? '<p class="b-none">' + HOL[d] + ', no classes</p>' : '') + '<div class="pp">' + due + parts + '</div>';
+}
+function dayNear(d) {
+  const ph = isPh();
+  const prev = laneRow(add(d, -1), ph ? 34 : 46).replace('class="l-row', 'class="l-row dim'), next = laneRow(add(d, 1), ph ? 34 : 46).replace('class="l-row', 'class="l-row dim');
+  const mid = laneRow(d, ph ? 64 : 130, ph ? undefined : true).replace('class="l-row', 'class="l-row focus');
+  return '<div class="near" style="--lw:' + (ph ? '46px' : '64px') + '">' + scale() + prev + mid + next + '</div><div class="d-sub">' + evRows(d) + '</div>';
+}
+const dayView = d => ({ a: dayLanes, b: dayFocus, c: dayParts, d: dayNear })[S.dv](d);
+const semLine = d => d >= SEM0 && d <= '2026-12-20' ? 'B261, teaching week ' + teachWeek(d) : 'Outside B261';
+
+/* ---------- the little calendar ---------- */
+function jumper() {
+  if (!S.j) return '';
+  const n = now(), at = S.at || n.d, ym = S.j, y = +ym.slice(0, 4), v = S.view;
+  const months = MN.map((name, i) => { const k = y + '-' + pad(i + 1); return '<button type="button" data-jm="' + k + '" aria-pressed="' + (v === 'month' ? k === at.slice(0, 7) : k === ym) + '" class="' + (k === n.d.slice(0, 7) ? 'cur' : '') + '">' + name.slice(0, 3) + '</button>'; }).join('');
+  let grid = '<div class="jr jh"><span>Wk</span>' + WD.map(w => '<span>' + w.slice(0, 2) + '</span>').join('') + '</div>';
+  const days = monthDays(ym + '-15');
+  for (let i = 0; i < days.length; i += 7) {
+    const row = days.slice(i, i + 7), inSem = row[0] >= SEM0 && row[0] <= '2026-12-20';
+    grid += '<div class="jr' + (v === 'week' && mon(at) === row[0] ? ' on' : '') + '"><button type="button" class="jw" data-jw="' + row[0] + '" aria-label="Open the week of ' + dayN(row[0]) + ' ' + mName(row[0]) + '">' + (inSem ? teachWeek(row[0]) : '·') + '</button>'
+      + row.map(d => '<button type="button" data-jd="' + d + '" class="' + (d.slice(0, 7) !== ym ? 'out ' : '') + (d === n.d ? 'tod' : '') + '" aria-pressed="' + (v === 'day' && d === at) + '"><span>' + dayN(d) + '</span><span class="marks">' + (dayEv(d).some(e => e.exam) ? '<i></i>' : '') + '</span></button>').join('') + '</div>';
+  }
+  const hint = { day: 'Pick a day', week: 'Pick a week, or a day in it', month: 'Pick a month, or a day' }[v];
+  return '<div id="jscrim" data-jclose></div><aside id="jump" data-view="' + v + '" role="dialog" aria-label="Go to a date"><div class="j-y"><button class="nav" type="button" data-jy="-1" aria-label="Previous year">‹</button><b>' + y + '</b><button class="nav" type="button" data-jy="1" aria-label="Next year">›</button></div><div class="j-ms">' + months + '</div>' + grid + '<div class="j-f"><span>' + hint + '</span><button type="button" data-jtoday>Today</button></div></aside>';
+}
+
+/* ---------- the calendar page ---------- */
+function calendar() {
+  const ph = isPh(), at = S.at || now().d, v = S.view, w = mon(at);
+  const title = v === 'month' ? `${mName(at)} ${at.slice(0, 4)}` : v === 'day' ? `${WD[dow(at)]} ${dayN(at)} ${mName(at)}` : `${dayN(w)} to ${dayN(add(w, 6))} ${mName(add(w, 6))}`;
+  const away = v === 'month' ? at.slice(0, 7) !== now().d.slice(0, 7) : v === 'day' ? at !== now().d : w !== mon(now().d);
+  const head = `<header class="ctop"><h1><button type="button" class="jt" data-jump aria-expanded="${!!S.j}">${title}<i>▾</i><small>${semLine(at)}</small></button></h1><div class="ctl"><button class="nav" type="button" data-step="-1" aria-label="Earlier">‹</button><button class="nav" type="button" data-step="1" aria-label="Later">›</button>${away ? '<button class="jump" type="button" data-home>Today</button>' : ''}<div class="segs">${['day', 'week', 'month'].map(x => `<button type="button" data-view="${x}" aria-pressed="${v === x}">${x[0].toUpperCase() + x.slice(1)}</button>`).join('')}</div></div></header>`;
+  let body;
+  if (S.round !== '1') body = v === 'day' ? dayView(at) : v === 'week' ? weekRot(at) : ph ? `${monthSmall(at, S.pick || at)}${bDay(S.pick || at)}` : monthBig(at);
+  else if (S.v === 'c') body = board(at);
+  else if (S.v === 'a') {
+    if (v === 'week') body = columns([0, 1, 2, 3, 4, 5, 6].map(i => add(w, i)));
+    else if (v === 'day') body = ph ? `${dayT(at).filter(t => !t.prep || !t.done).map(bTask).join('')}${columns([at], true)}` : `<div class="b" style="grid-template-columns:minmax(0,1fr) 340px"><div>${columns([at], true)}</div><div><h2 class="sidehead">Due</h2>${dayT(at).map(bTask).join('') || '<p class="b-none">Nothing due</p>'}</div></div>`;
+    else body = ph ? `${monthSmall(at, S.pick || at)}${bDay(S.pick || at)}` : monthBig(at);
+  } else {
+    if (v === 'week') body = lanesWeek(at);
+    else if (v === 'month') body = lanesMonth(at);
+    else body = `<div style="--lw:${ph ? '46px' : '64px'}">${scale()}${laneRow(at, ph ? 92 : 120, true)}</div>${bDay(at, false).replace(/<div class="b-tk">.*?<\/div>/g, '')}`;
+  }
+  return head + body;
+}
+
+/* ---------- Today ---------- */
+const nextEv = () => { const n = now(); return EV.filter(e => !e.cancelled && (e.day > n.d || (e.day === n.d && e.from > n.t))).sort((a, b) => a.day.localeCompare(b.day) || a.from - b.from)[0]; };
+const dur = m => (m >= 60 ? Math.floor(m / 60) + ' h ' : '') + (m % 60 ? m % 60 + ' min' : '');
+const dayWord = d => { const k = diff(now().d, d); return k === 0 ? '' : k === 1 ? 'Tomorrow' : WD[dow(d)]; };
+function plate() {
+  const n = now(), today = dayEv(n.d).filter(e => !e.cancelled), live = today.find(e => status(e) === 'live'), nx = nextEv();
+  const rest = today.some(e => status(e) !== 'past');
+  const nxIn = nx.day === n.d ? 'in ' + dur(nx.from - n.t) : diff(n.d, nx.day) === 1 ? 'in ' + dur(1440 - n.t + nx.from) : 'in ' + diff(n.d, nx.day) + ' days';
+  const nextSlot = `<div class="slot next${nx.exam ? ' exam' : ''}"><div class="label"><b>${dayWord(nx.day) ? dayWord(nx.day) + ' ' : 'Next '}${hm(nx.from)}</b><span><span>${nxIn}</span></span></div><div class="code">${nx.room}</div><div class="cap"><div><b>${nx.s}</b> ${SUB[nx.s]}</div><span>${kindWord(nx)}${nx.exam && prepLeft(nx) ? ', ' + prepLeft(nx) + ' prep left' : ''}</span></div></div>`;
+  let slot;
+  if (live) slot = `<div class="slot now"><i class="spent" style="width:${(n.t - live.from) / (live.to - live.from) * 100}%"></i><div class="label"><b>Now</b><span><span>until ${hm(live.to)}</span><b>${live.to - n.t} min left</b></span></div><div class="code">${live.room}</div><div class="cap"><span><b>${live.s}</b> ${SUB[live.s]}</span><span>${live.kind}</span></div></div>`;
+  else if (rest) slot = `<div class="slot now out"><div class="label"><b>Now</b><span><span>until ${hm(nx.from)}</span><b>${dur(nx.from - n.t)}</b></span></div><div class="code">Free</div><div class="cap">No Event right now</div></div>`;
+  else {
+    const word = today.length ? 'Done' : 'Free', cap = today.length ? `${today.length} Events finished` : 'No Events today';
+    if (S.q === 'fold') return `<section class="plate one"><p class="foldline">${word}<span>${cap}</span></p>${nextSlot}</section>`;
+    slot = `<div class="slot now out"><div class="label"><b>Today</b><span></span></div><div class="code">${word}</div><div class="cap">${cap}</div></div>`;
+  }
+  return `<section class="plate">${slot}${nextSlot}</section>`;
+}
+function ruler() {
+  const n = now(), a = 540, b = 1080, today = dayEv(n.d).filter(e => !e.cancelled);
+  if (!today.length) return S.q === 'fold' ? '' : '<p class="r-empty">Nothing on the ruler today.</p>';
+  if (S.q === 'fold' && today.every(e => status(e) === 'past')) return '';
+  const x = m => (m - a) / (b - a) * 100;
+  const bars = pack(today).map(({ e }) => block(e, `left:${x(e.from)}%;width:${x(e.to) - x(e.from)}%;top:0;bottom:0`, 'x', 'bare')).join('');
+  const tag = n.t >= a && n.t <= b ? `<span class="r-tag" style="left:${x(n.t)}%">${hm(n.t)}</span><i class="l-nowl" style="left:${x(n.t)}%;top:-4px"></i>` : '';
+  return `<section class="ruler"><div class="r-lane">${tag}${bars}</div><div class="r-under">${today.map((e, i) => `<span class="${status(e) === 'past' ? 'past' : ''}" style="${i === today.length - 1 && isPh() ? 'right:0;text-align:right' : `left:${x(e.from)}%`}"><b>${isPh() ? short(e) : label(e)}</b>${hm(e.from)}</span>`).join('')}</div></section>`;
+}
+function dueCell(t) {
+  const n = now(), k = diff(n.d, t.d);
+  if (overdue(t)) return `<span class="due l0"><span class="flag">${alert}Overdue</span><small>${rel(t.d)}</small></span>`;
+  if (k === 0) return `<span class="due l1">Today<small>${t.t ? hm(t.t === 1439 ? 1439 : t.t) : ''}</small></span>`;
+  return `<span class="due">${k === 1 ? 'Tomorrow' : WD[dow(t.d)]}<small>${dayN(t.d)} ${mName(t.d).slice(0, 3)}</small></span>`;
+}
+const trow = t => `<li class="trow${t.done ? ' done' : ''}">${tick(t)}<button class="t-link" type="button" data-open="t:${t.id}"><span class="t-title">${t.title}</span><span class="t-sub">${t.s ? `<b>${t.s}</b> ${SUB[t.s]}` : 'No Subject'}</span></button>${dueCell(t)}</li>`;
+const erow = e => `<li><button type="button" class="erow ${status(e)}" data-open="e:${e.id}"><time><b>${hm(e.from)}</b>${hm(e.to)}</time><span><span class="room">${e.room || e.title}</span><span class="kind">${e.room ? kindWord(e) : ''}</span>${e.s ? `<span class="sub"><b>${e.s}</b> ${SUB[e.s]}</span>` : ''}</span>${status(e) === 'live' ? '<span class="chip" style="align-self:center">Now</span>' : ''}</button></li>`;
+function slab(e) {
+  const left = prepLeft(e);
+  return `<div><h3 class="slabh">${rel(e.day)}, ${WD[dow(e.day)]}</h3><button type="button" class="slab" data-open="e:${e.id}"><time><b>${hm(e.from)}</b>${hm(e.to)}</time><span><span class="room">${e.room}</span><span class="kind">${e.title}</span><span class="sub"><b>${e.s}</b> ${SUB[e.s]}</span>${prepOf(e).length ? `<span class="prep">${left ? left + ' prep left' : 'Prep done'}</span>` : ''}</span></button></div>`;
+}
+function lists(d) {
+  const n = now(), isToday = d === n.d;
+  const open = T.filter(t => !t.done).sort((a, b) => a.d.localeCompare(b.d));
+  const ts = isToday ? open.filter(t => diff(n.d, t.d) <= 5).slice(0, 5) : dayT(d);
+  const today = dayEv(d).filter(e => !e.exam);
+  let evDay = d, evs = today;
+  if (isToday && !today.some(e => status(e) !== 'past')) { const nx = nextEv(); evDay = nx.day; evs = dayEv(evDay).filter(e => !e.exam); }
+  const label2 = evDay === n.d ? 'Events' : dayWord(evDay) || WD[dow(evDay)];
+  const rows = [];
+  evs.forEach((e, i) => { rows.push(erow(e)); const nxt = evs[i + 1]; if (nxt && nxt.from - e.to >= 90) rows.push(`<li class="gaprow">${dur(nxt.from - e.to)} free</li>`); });
+  const exam = EV.find(e => e.exam && e !== nextEv() && diff(n.d, e.day) >= 0 && diff(n.d, e.day) <= 2 && status(e) !== 'past');
+  return `<div class="cols"><section class="col"><div class="head"><h2>Tasks <span class="n">${ts.filter(t => !t.done).length}</span></h2></div><ul>${ts.map(trow).join('')}</ul>${ts.length ? '' : '<p class="none">Nothing due</p>'}</section><section class="col">${exam && isToday && exam.day === evDay ? slab(exam) + '<div style="height:18px"></div>' : ''}<div class="head"><h2>${label2} <span class="n">${evs.length}</span></h2></div><ul>${rows.join('')}</ul>${evs.length ? '' : '<p class="none">No Events</p>'}${exam && isToday && exam.day !== evDay ? slab(exam) : ''}</section></div>`;
+}
+function wkRow(d) {
+  const n = now(), evs = dayEv(d).filter(e => !e.cancelled), ts = dayT(d).filter(t => !t.done), rare = evs.filter(e => e.title);
+  const notes = rare.map(e => `<b>${e.title}</b>`).concat(HOL[d] ? [HOL[d]] : []).join(', ');
+  return `<button type="button" data-tday="${d}"><span class="wk-d"><b>${WD[dow(d)].slice(0, 3)}</b>${dayN(d)} ${mName(d).slice(0, 3)}</span><span>${notes ? `<span class="wk-note" style="display:block">${notes}</span>` : ''}</span><span class="wk-m">${evs.length ? `<span>${evs.length} ${evs.length === 1 ? 'Event' : 'Events'}</span>` : ''}${ts.length ? `<span class="cnt${ts.some(overdue) ? ' over' : ''}"><i></i>${ts.length} due</span>` : ''}</span></button>`;
+}
+function weekPage() {
+  const n = now(), w = mon(n.d), days = [0, 1, 2, 3, 4, 5, 6].map(i => add(w, i));
+  const big = EV.filter(e => e.exam && status(e) !== 'past').sort((a, b) => a.day.localeCompare(b.day))[0];
+  const h = big ? `<button type="button" class="big" data-open="e:${big.id}"><span class="w">${big.title}, ${WD[dow(big.day)]} ${hm(big.from)}</span><span class="c">${rel(big.day)}</span><span class="s"><b>${big.s}</b> ${SUB[big.s]}, ${big.room}. ${prepLeft(big) ? prepLeft(big) + ' prep left' : 'Prep done'}</span></button>` : '';
+  /* only what is not routine: Tasks and one-off Events. Classes shrink to one line. */
+  const groups = days.filter(d => d >= n.d).map(d => {
+    const evs = dayEv(d), rare = evs.filter(e => e.title && !e.exam), routine = evs.filter(isRoutine), ts = dayT(d);
+    return `<div class="wgd"><h2 class="b-h">${d === n.d ? 'Today' : dayWord(d) || WD[dow(d)]} <small>${dayN(d)} ${mName(d).slice(0, 3)}</small></h2>${evs.filter(e => e.exam).map(bRow).join('')}${rare.map(bRow).join('')}${ts.filter(t => !t.done).map(bTask).join('')}${routine.length ? `<p class="b-none">${routine.length} ${routine.length === 1 ? 'class' : 'classes'}, first ${hm(routine[0].from)}</p>` : evs.length || ts.length ? '' : '<p class="b-none">Nothing scheduled</p>'}</div>`;
+  }).join('');
+  return `${h}<div class="wg" style="margin-top:10px">${groups}</div>`;
+}
+function today() {
+  const n = now(), open = T.filter(t => !t.done), over = open.filter(overdue).length, due = open.filter(t => t.d === n.d && !overdue(t)).length;
+  const tabs = `<div class="tabs">${over ? `<span class="tab over">${alert}${over} overdue</span>` : ''}${due ? `<span class="tab due">${due} due today</span>` : ''}</div>`;
+  const head = `<header class="top"><h1>${WD[dow(n.d)]} <span>${dayN(n.d)} ${mName(n.d)}</span></h1>${S.v === 'b' ? `<div class="sw"><button type="button" data-tw="today" aria-pressed="${S.tw === 'today'}">Today</button><button type="button" data-tw="week" aria-pressed="${S.tw === 'week'}">This week</button></div>` : ''}</header>`;
+  if (S.v === 'b' && S.tw === 'week') return head + weekPage();
+  const w = mon(n.d);
+  if (S.v === 'c') {
+    const sel = S.pick && S.pick >= w && S.pick <= add(w, 6) ? S.pick : n.d;
+    const strip = `<div class="strip" style="margin-top:10px">${[0, 1, 2, 3, 4, 5, 6].map(i => { const d = add(w, i); return `<button type="button" data-pick="${d}" aria-pressed="${d === sel}" class="${d === n.d ? 'isnow' : ''}">${WD[dow(d)].slice(0, 2)}<b>${dayN(d)}</b>${marks(d)}</button>`; }).join('')}</div>`;
+    return head + `<div class="route">${tabs}${plate()}</div>` + strip + lists(sel);
+  }
+  const body = head + `<div class="route">${tabs}${plate()}</div>` + lists(n.d);
+  if (S.v === 'a') return body + `<section class="wk"><h2 class="wk-h">Next 7 days</h2><div class="wk-rows">${[1, 2, 3, 4, 5, 6, 7].map(i => wkRow(add(n.d, i))).join('')}</div></section>`;
+  return body;
+}
+
+/* ---------- drawer ---------- */
+function drawer() {
+  if (!S.open) return '';
+  const [k, id] = S.open.split(':');
+  let h = '<button class="dclose" type="button" data-close aria-label="Close">×</button>';
+  if (k === 'e') {
+    const e = EV.find(x => x.id === id), p = prepOf(e), done = p.filter(t => t.done).length;
+    h += `<p class="d-k">${e.cancelled ? 'Cancelled' : e.kind === 'Own' ? 'Event' : e.kind}</p><h2 class="d-t">${e.title || e.s + ' ' + e.kind}</h2>`;
+    if (e.exam && status(e) !== 'past') h += `<p class="count">${rel(e.day)}<small>${hm(e.from)}</small></p>`;
+    h += `<div class="d-rows"><div><span>When</span>${WD[dow(e.day)]} ${dayN(e.day)} ${mName(e.day)}, ${hm(e.from)} to ${hm(e.to)}</div>${e.room ? `<div><span>Room</span>${e.room}</div>` : ''}${e.s ? `<div><span>Subject</span>${e.s} ${SUB[e.s]}</div>` : ''}${e.src ? `<div><span>From</span>${e.src}</div>` : ''}</div>`;
+    if (p.length) h += `<h3 class="sidehead" style="margin-top:18px">Prep ${done} of ${p.length}</h3><div class="prepbar">${p.map(t => `<i class="${t.done ? 'on' : ''}"></i>`).join('')}</div>${p.map(bTask).join('')}`;
+  } else {
+    const t = T.find(x => x.id === id), e = t.prep && EV.find(x => x.id === t.prep);
+    h += `<p class="d-k">Task</p><h2 class="d-t">${t.title}</h2><div class="d-rows"><div><span>Due</span>${WD[dow(t.d)]} ${dayN(t.d)} ${mName(t.d)}${t.t ? ', ' + hm(t.t) : ''}</div>${t.s ? `<div><span>Subject</span>${t.s} ${SUB[t.s]}</div>` : ''}${e ? `<div><span>Prep for</span>${e.title}, ${rel(e.day).toLowerCase()}</div>` : ''}${t.src ? `<div><span>From</span>${t.src}</div>` : ''}</div>`;
+  }
+  return `<div id="scrim" data-close></div><aside id="drawer" role="dialog" aria-label="Item">${h}</aside>`;
+}
+
+/* ---------- render, routing and the prototype bar ---------- */
+function nav() {
+  const items = [['today', 'clock', 'Today'], ['cal', 'calendar', 'Calendar'], ['', 'book', 'Subjects'], ['', 'file', 'Notes']];
+  const html = items.map(([s, i, t]) => `<button type="button" ${s ? `data-screen="${s}"` : ''} ${S.s === s ? 'aria-current="page"' : ''}><svg class="i"><use href="#${i}"/></svg>${t}</button>`).join('');
+  document.getElementById('railnav').innerHTML = html;
+  document.getElementById('dock').innerHTML = html + '<button class="add" type="button"><svg class="i"><use href="#plus"/></svg>Add</button>';
+}
+function bar() {
+  const b = document.getElementById('bar'), r2 = S.s === 'cal' && S.round !== '1', names = S.s === 'cal' ? CALV : TODV, grp = (k, opts) => '<span class="grp">' + opts.map(([v, t]) => `<button type="button" data-set="${k}=${v}" aria-pressed="${S[k] === v}">${t}</button>`).join('') + '</span>';
+  b.className = S.tuck ? 'tucked' : '';
+  b.innerHTML = `<span class="grp keep"><button type="button" data-cycle="-1" aria-label="Previous variant">‹</button><span class="name">${r2 ? (S.view === 'day' ? 'Day ' + S.dv.toUpperCase() + ' ' + DAYV[S.dv] : S.view === 'week' ? 'Week: Rotated' : 'Month: Grid') : S.v.toUpperCase() + ' ' + names[S.v]}</span><button type="button" data-cycle="1" aria-label="Next variant">›</button></span>`
+    + grp('st', [['live', 'Live'], ['free', 'Free'], ['evening', 'Evening'], ['weekend', 'Sat']])
+    + (S.s === 'cal' ? grp('round', [['2', 'Round 2'], ['1', 'Round 1']]) : '')
+    + (innerWidth >= 900 ? grp('f', [['', 'Desktop'], ['phone', 'Phone']]) : '')
+    + grp('theme', [['dark', 'Black'], ['light', 'Light']])
+    + `<span class="grp keep"><button type="button" data-tuck aria-label="Toggle controls">${S.tuck ? '+' : '–'}</button></span>`;
+}
+function render() {
+  const r = document.documentElement, ph = isPh();
+  ph ? r.setAttribute('data-ph', '') : r.removeAttribute('data-ph');
+  S.theme === 'dark' ? r.setAttribute('data-dark', '') : r.removeAttribute('data-dark');
+  r.dataset.frame = S.f; r.dataset.kinds = S.kinds;
+  document.getElementById('page').innerHTML = S.s === 'cal' ? calendar() : today();
+  document.getElementById('overlay').innerHTML = S.s === 'cal' && S.j ? jumper() : drawer();
+  nav(); bar();
+  fit();
+}
+function fit() {
+  document.querySelectorAll('.code').forEach(c => {
+    c.style.fontSize = '';
+    const g = document.createRange(); g.selectNodeContents(c);
+    const w = g.getBoundingClientRect().width, room = c.clientWidth;
+    if (w > room) c.style.fontSize = Math.floor(parseFloat(getComputedStyle(c).fontSize) * room / w) + 'px';
+  });
+}
+const KEYS = ['s', 'v', 'dv', 'round', 'j', 'sel', 'view', 'st', 'f', 'theme', 'kinds', 'q', 'tw', 'at', 'pick', 'open'];
+function save() {
+  const p = new URLSearchParams();
+  KEYS.forEach(k => { if (S[k]) p.set(k, S[k]); });
+  history.replaceState(null, '', '#' + p);
+  render();
+}
+function load() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  KEYS.forEach(k => { if (p.has(k)) S[k] = p.get(k); });
+  if (p.has('shot')) document.documentElement.setAttribute('data-shot', '');
+  if (!p.has('theme') && !matchMedia('(prefers-color-scheme: dark)').matches) S.theme = 'light';
+  S.tuck = innerWidth < 700;
+  settle();
+  render();
+}
+T.forEach(t => { t.was = !!t.done; });
+const settle = () => T.forEach(t => { t.done = S.st === 'weekend' && t.d <= '2026-11-06' ? true : t.was; });
+function step(n) {
+  const at = S.at || now().d;
+  if (S.view === 'month') { const d = D(at.slice(0, 8) + '15'); d.setUTCMonth(d.getUTCMonth() + n); S.at = iso(d); }
+  else S.at = add(at, n * (S.view === 'day' ? 1 : 7));
+  S.pick = null;
+}
+function cycle(n) {
+  if (S.s === 'cal' && S.round !== '1') { if (S.view !== 'day') return; const ks = 'abcd'; S.dv = ks[(ks.indexOf(S.dv) + n + 4) % 4]; S.sel = null; return; }
+  const ks = 'abc'; S.v = ks[(ks.indexOf(S.v) + n + 3) % 3];
+}
+document.addEventListener('click', ev => {
+  const t = ev.target.closest('[data-set],[data-cycle],[data-tuck],[data-screen],[data-view],[data-step],[data-home],[data-day],[data-pick],[data-open],[data-close],[data-tw],[data-tday],[data-earlier],[data-jump],[data-jclose],[data-jy],[data-jm],[data-jd],[data-jw],[data-jtoday],[data-sel]');
+  if (!t) return;
+  const d = t.dataset;
+  if (d.set) { const [k, v] = d.set.split('='); S[k] = v; if (k === 'st') { S.at = null; S.pick = null; settle(); } }
+  else if (d.cycle) cycle(+d.cycle);
+  else if ('jump' in d) S.j = S.j ? null : (S.at || now().d).slice(0, 7);
+  else if ('jclose' in d) S.j = null;
+  else if (d.jy) S.j = (+S.j.slice(0, 4) + +d.jy) + S.j.slice(4);
+  else if (d.jm) { if (S.view === 'month') { S.at = d.jm + '-01'; S.j = null; S.pick = null; } else S.j = d.jm; }
+  else if (d.jd) { S.at = d.jd; if (S.view === 'month') S.view = 'day'; S.j = null; S.pick = null; S.sel = null; }
+  else if (d.jw) { S.at = d.jw; S.view = 'week'; S.j = null; S.pick = null; }
+  else if ('jtoday' in d) { S.at = null; S.j = null; S.pick = null; S.sel = null; }
+  else if (d.sel) S.sel = d.sel;
+  else if ('tuck' in d) S.tuck = !S.tuck;
+  else if ('earlier' in d) S.earlier = true;
+  else if (d.screen) { S.s = d.screen; S.pick = null; S.at = null; }
+  else if (d.view) { S.view = d.view; S.pick = null; }
+  else if (d.step) { step(+d.step); S.sel = null; }
+  else if ('home' in d) { S.at = null; S.pick = null; }
+  else if (d.day) { if (S.s === 'cal') { S.at = d.day; S.view = 'day'; S.pick = null; S.sel = null; } }
+  else if (d.pick) { S.pick = d.pick; if (S.s === 'cal' && S.v === 'c' && S.view !== 'month') { S.at = d.pick; S.view = 'day'; S.pick = null; } }
+  else if (d.tday) { S.s = 'cal'; S.v = 'a'; S.view = 'day'; S.at = d.tday; }
+  else if (d.open) S.open = d.open;
+  else if ('close' in d) S.open = null;
+  else if (d.tw) S.tw = d.tw;
+  if (d.screen || d.view || d.step || d.jd || d.jw || d.jm) scrollTo(0, 0);
+  save();
+});
+document.addEventListener('change', ev => {
+  const id = ev.target.dataset.tick; if (!id) return;
+  T.find(t => t.id === id).done = ev.target.checked; render();
+});
+addEventListener('keydown', ev => {
+  if (ev.key === 'Escape' && (S.open || S.j)) { S.open = null; S.j = null; save(); }
+  if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') { cycle(ev.key === 'ArrowRight' ? 1 : -1); save(); }
+});
+addEventListener('resize', render);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+load();
+</script>
+</body>
+</html>
