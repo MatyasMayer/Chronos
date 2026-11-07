@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Today in Chronos</title>
+<meta name="theme-color" content="#F1F2EC">
+<script>
+  // The theme follows the system until a theme is picked. #free shows the gap between Events.
+  (function () {
+    var q = new URLSearchParams(location.search), r = document.documentElement;
+    var tone = matchMedia('(prefers-color-scheme: dark)'), picks = ['auto', 'oled-leaf', 'white-leaf'];
+    var stored = null;
+    try { stored = localStorage.getItem('chronos-theme'); } catch (e) {}
+    var pick = picks.indexOf(q.get('mode')) > -1 ? q.get('mode') : picks.indexOf(stored) > -1 ? stored : 'auto';
+    function apply() {
+      var host = r.getAttribute('data-theme');
+      var dark = host ? host === 'dark' : tone.matches;
+      var mode = pick === 'auto' ? (dark ? 'oled-leaf' : 'white-leaf') : pick;
+      r.dataset.mode = mode;
+      r.dataset.pick = pick;
+      var meta = document.querySelector('meta[name=theme-color]');
+      if (meta) meta.content = mode === 'oled-leaf' ? '#000000' : '#F0F2EC';
+    }
+    window.chronosTheme = function (p) {
+      pick = p;
+      try { localStorage.setItem('chronos-theme', p); } catch (e) {}
+      apply();
+    };
+    tone.addEventListener('change', apply);
+    new MutationObserver(apply).observe(r, { attributes: true, attributeFilter: ['data-theme'] });
+    r.dataset.state = q.get('state') === 'free' || location.hash === '#free' ? 'free' : 'live';
+    addEventListener('hashchange', function () { location.reload(); });
+    apply();
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Before Barlow Condensed arrives, a system face is scaled down to the same set width,
+   so a room code can never push out of its slot. */
+@font-face { font-family: "Sign Fallback"; font-weight: 400 700; size-adjust: 72%; src: local("Arial Bold"), local("Arial-BoldMT"), local("Helvetica Neue Bold"), local("HelveticaNeue-Bold"), local("Roboto Bold"), local("Arial"); }
+
+:root {
+  color-scheme: light dark;
+  --paper: light-dark(#F1F2EC, #0D1412);
+  --ink: light-dark(#14211C, #E9EEE7);
+  --muted: light-dark(#4A5852, #A6B4AC);
+  --line: light-dark(#D1D6CB, #29352F);
+  --box: light-dark(#5E6C65, #7F8F87);
+  --tickbox: light-dark(#0F4638, #7F8F87);
+  --press: light-dark(#E5E7DE, #18211D);
+
+  /* the sign */
+  --plate: light-dark(#0F4638, #14574A);
+  --socket: light-dark(#0A2E25, #0A2A23);
+  --chalk: #F2F5EE;
+  --chalk-muted: light-dark(#C3D6CA, #CFE0D5);
+  --chalk-line: light-dark(#3C6A5D, #3F7E6E);
+
+  /* yellow means live now, and nothing else */
+  --yellow: light-dark(#F7E92B, #E8DC3A);
+  --yellow-spent: light-dark(#EADA17, #D2C62C);
+  --on-yellow: #12211B;
+
+  /* red-brick means overdue, and nothing else */
+  --brick: light-dark(#A5371F, #B8432A);
+  --alert: light-dark(#A5371F, #F2A08A);
+
+  /* the ruler, and rare things */
+  --bar: light-dark(#0F4638, #1A6A59);
+  --seg: light-dark(#0F4638, #2F9079);
+  --seg-past: light-dark(#A9B3AA, #4C5B54);
+  --slab: light-dark(#14211C, #DDE4DC);
+  --slab-ink: light-dark(#F2F5EE, #0F1A16);
+  --slab-muted: light-dark(#C5CFC8, #3A4A43);
+
+  --r: 6px;
+  --text: "Barlow", "Segoe UI", system-ui, sans-serif;
+  --sign: "Barlow Condensed", "Sign Fallback", sans-serif;
+  --click: cubic-bezier(.2, 1.4, .4, 1);
+  --slide: cubic-bezier(.2, .8, .2, 1);
+
+  /* the ruler scale, in minutes after midnight */
+  --t0: 540; --span: 480; --now: 700;
+  --lab: 0px;
+  --edge: 16px;
+}
+:root[data-state=free] { --now: 785; }
+
+/* Full black, for OLED. Black pixels are off, so light only what matters:
+   yellow Now is the one large lit area, and green drops to thin lines.
+   oled-green keeps the filled green plate on the same black ground. */
+:root[data-mode=oled-leaf] {
+  color-scheme: dark;
+  --paper: #000; --ink: #F2F5EE; --muted: #A9B6AE; --line: #1F2925; --box: #7F8F87; --tickbox: #7F8F87; --press: #101613;
+  --yellow: #F4E52E; --yellow-spent: #D6C91F; --on-yellow: #0B0F0D;
+  --brick: #B8432A; --alert: #F2A08A;
+  --bar: #0F4A3D; --seg: #2F9079; --seg-past: #46534D;
+  --chalk-muted: #CFE0D5; --chalk-line: #2F6F60;
+}
+/* Leaf: the chosen identity, on black and on paper */
+:root[data-mode=oled-leaf] { --plate: #00612E; --bar: #00612E; --socket: #002C12; --seg: #4AA969; --chalk-line: #49845A; --chalk-muted: #D4ECD9; }
+:root[data-mode=white-leaf] {
+  color-scheme: light;
+  --paper: #F0F2EC; --ink: #101A14; --muted: #4A574F; --line: #D3D8CF; --box: #5F6B63; --tickbox: #00612E; --press: #E4E7DF;
+  --plate: #00612E; --socket: #00431F; --chalk-muted: #D4ECD9; --chalk-line: #49845A;
+  --yellow: #F4E52E; --yellow-spent: #D6C91F; --on-yellow: #0B0F0D;
+  --brick: #A5371F; --alert: #A5371F;
+  --bar: #00612E; --seg: #00612E; --seg-past: #A9B3AB;
+  --slab: #101A14; --slab-ink: #F2F5EE; --slab-muted: #C5CFC8;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 16px; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.35 var(--text); font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+h1, h2, h3, p, ul { margin: 0; padding: 0; font: inherit; }
+ul { list-style: none; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+svg.i { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 3px; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* shell */
+.rail { display: none; }
+main { padding: env(safe-area-inset-top) 12px calc(104px + env(safe-area-inset-bottom)); max-width: 1240px; margin: 0 auto; }
+
+/* header */
+.top { display: flex; align-items: flex-end; min-height: 58px; padding: 6px 4px 8px; line-height: 1.2; }
+.top h1 { font-weight: 600; font-size: 17px; }
+.top h1 span { display: block; font-weight: 500; font-size: 16px; color: var(--muted); }
+.top .sem { font: 600 18px/19px var(--sign); color: var(--muted); margin-left: 6px; }
+
+/* the plate: a green sign holding a yellow insert */
+.route { position: relative; }
+.tabs { position: absolute; right: 0; bottom: 100%; display: flex; justify-content: flex-end; }
+.tab {
+  display: flex; align-items: center; gap: 5px; height: 44px; padding: 0 11px; overflow: hidden; white-space: nowrap;
+  max-width: 190px; font: 600 19px/1 var(--sign); border-radius: var(--r) var(--r) 0 0;
+  transition: transform 220ms var(--slide), max-width 220ms var(--slide), padding 220ms var(--slide), visibility 0s;
+}
+.tab svg.i { width: 18px; height: 18px; stroke-width: 2; }
+.tab.over { background: var(--brick); color: #fff; }
+.tab.due { background: var(--plate); color: var(--chalk); margin-left: 2px; }
+.tab.gone { transform: translateY(100%); max-width: 0; padding-inline: 0; margin-left: 0; visibility: hidden; transition: transform 200ms cubic-bezier(.5, 0, .8, .4), max-width 200ms 120ms, padding 200ms 120ms, visibility 0s 320ms; }
+.tab:active { filter: brightness(.92); }
+.roll { display: inline-block; }
+.roll.go { animation: roll 220ms var(--slide); }
+@keyframes roll { from { transform: translateY(-.7em); opacity: 0; } }
+
+.plate { position: relative; z-index: 1; display: grid; background: var(--plate); color: var(--chalk); border-radius: var(--r); padding: 4px 4px 0; transition: border-radius 120ms; }
+.tabbed .plate { border-top-right-radius: 0; }
+.slot { position: relative; padding: 10px 12px 12px; min-width: 0; container-type: inline-size; }
+.label { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font: 500 20px/1.2 var(--sign); }
+.label > b { font-size: 24px; font-weight: 600; }
+.label > span { display: flex; gap: 12px; white-space: nowrap; }
+.label > span b { font-weight: 600; }
+.label span:empty { display: none; }
+.code { font: 600 min(92px, calc(100cqi / 3.72))/1 var(--sign); white-space: nowrap; margin: 0; }
+.cap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 12px; font-weight: 500; }
+.cap b { font-weight: 600; }
+
+.now { background: var(--yellow); color: var(--on-yellow); border-radius: 3px; overflow: hidden; }
+.now > :not(.spent) { position: relative; }
+.now .code { font-size: min(120px, calc(100cqi / 2.6)); line-height: .94; margin-top: 2px; }
+.spent { position: absolute; inset: 0 auto 0 0; width: calc((var(--now) - 660) / 90 * 100%); background: var(--yellow-spent); }
+.next .label > span, .next .cap > span { color: var(--chalk-muted); }
+.next { padding-top: 12px; }
+
+/* no Event live: the yellow insert is out, and the socket shows */
+[data-state=free] .now { background: var(--socket); color: var(--chalk); }
+[data-state=free] .spent { display: none; }
+[data-state=free] .now .label > span, [data-state=free] .now .cap { color: var(--chalk-muted); }
+[data-state=free] .now .code { font-size: min(72px, calc(100cqi / 2.6)); margin-block: 2px 4px; }
+
+/* the Slot Ruler */
+.ruler { display: grid; grid-template-columns: var(--lab) minmax(0, 1fr); margin-top: 6px; }
+.lanes { grid-column: 2; position: relative; }
+.names { display: none; }
+.scale { position: relative; height: 26px; }
+.tick { display: none; }
+.nowtag { position: absolute; left: calc((var(--now) - var(--t0)) / var(--span) * 100%); top: 0; z-index: 3; transform: translateX(-50%); height: 23px; padding: 0 6px; font: 600 18px/23px var(--sign); background: var(--ink); color: var(--paper); border-radius: 3px; }
+.lane { position: relative; height: 24px; }
+.lane::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1.5px; margin-top: -.75px; background: var(--line); }
+.lane.fri { display: none; }
+.nowline { position: absolute; z-index: 2; top: 20px; height: 30px; left: calc((var(--now) - var(--t0)) / var(--span) * 100%); width: 2px; margin-left: -1px; background: var(--ink); }
+.bar { position: absolute; top: 0; bottom: 0; left: calc((var(--from) - var(--t0)) / var(--span) * 100%); width: calc((var(--to) - var(--from)) / var(--span) * 100%); overflow: hidden; border-radius: 3px; font: 500 16px/1.15 var(--sign); white-space: nowrap; }
+.bar .txt { display: none; }
+.bar.past { background: var(--paper); box-shadow: inset 0 0 0 1.5px var(--box); color: var(--muted); }
+.bar.up { background: var(--bar); color: var(--chalk); }
+.bar.live { background: var(--yellow); color: var(--on-yellow); }
+.bar.live .fill { position: absolute; inset: 0 auto 0 0; width: calc((var(--now) - var(--from)) / (var(--to) - var(--from)) * 100%); background: var(--yellow-spent); }
+.bar.live::after { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 1.5px var(--plate); border-radius: 3px; }
+.bar.exam { background: var(--slab); color: var(--slab-ink); }
+.bar b { font-weight: 600; }
+.under { position: relative; height: 44px; margin-top: 4px; font: 500 16px/22px var(--sign); }
+.under span { position: absolute; left: calc((var(--from) - var(--t0)) / var(--span) * 100%); white-space: nowrap; }
+.under span b { display: block; font-weight: 600; }
+.under .past { color: var(--muted); }
+.under .end { left: auto; right: 0; text-align: right; }
+.under span i { font-style: normal; color: var(--muted); }
+.gaplabel { display: none; }
+
+/* lists */
+.cols { display: grid; gap: 24px; margin-top: 16px; }
+.col { padding-inline: var(--edge); min-width: 0; }
+.head { display: flex; align-items: flex-end; border-bottom: 3px solid var(--plate); }
+.head h2 { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; font: 600 23px/1 var(--sign); background: var(--plate); color: var(--chalk); border-radius: var(--r) var(--r) 0 0; }
+.head h2 .n { font-weight: 500; color: var(--chalk-muted); }
+
+.task { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 4px; align-items: center; min-height: 64px; padding: 6px 0; border-bottom: 1px solid var(--line); overflow: hidden; transition: height 220ms var(--slide), opacity 160ms linear; }
+.task.leaving { opacity: 0; padding-block: 0; min-height: 0; }
+.tick-box { position: relative; width: 44px; height: 44px; display: grid; place-items: center; margin-left: -8px; cursor: pointer; }
+.tick-box input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.tick-box b { display: grid; place-items: center; width: 28px; height: 28px; border: 2px solid var(--tickbox); border-radius: var(--r); transition: background 120ms, transform 120ms; }
+.tick-box:hover b { background: var(--press); }
+.tick-box input:active + b { transform: translateY(1px) scale(.96); }
+.tick-box input:focus-visible + b { outline: 2px solid var(--ink); outline-offset: 2px; }
+.tick-box svg { width: 19px; height: 19px; fill: none; stroke: var(--chalk); stroke-width: 2.75; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 24; stroke-dashoffset: 24; }
+.tick-box input:checked + b { background: var(--plate); border-color: var(--plate); animation: seat 220ms var(--click); }
+.tick-box input:checked + b svg { stroke-dashoffset: 0; transition: stroke-dashoffset 160ms ease-out 40ms; }
+@keyframes seat { 0% { transform: scale(.82); } }
+
+.t-link { display: block; min-height: 44px; border-radius: 3px; min-width: 0; }
+.t-title { display: block; font-size: 17px; font-weight: 500; line-height: 1.3; }
+.t-title span { background: linear-gradient(currentColor, currentColor) 0 56% / 0 1.5px no-repeat; transition: background-size 180ms ease-out; }
+.t-sub { display: block; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t-sub b { font: 600 18px/1 var(--sign); color: var(--ink); margin-right: 3px; }
+.t-link:hover .t-title span { text-decoration: underline; text-underline-offset: 3px; }
+.due { text-align: right; line-height: 1.2; white-space: nowrap; font-family: var(--sign); font-size: 21px; font-weight: 500; }
+.due small { display: block; font: 400 16px/1.2 var(--text); color: var(--muted); }
+.due.l1 { font-weight: 600; }
+.due.l3 { color: var(--muted); }
+.due .flag { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 7px; background: var(--brick); color: #fff; font-weight: 600; border-radius: 3px; }
+.due .flag svg.i { width: 16px; height: 16px; stroke-width: 2; }
+.due.l0 small { color: var(--alert); font-weight: 500; margin-top: 2px; }
+.undo { display: none; min-width: 64px; height: 44px; padding: 0 10px; border: 1.5px solid var(--box); border-radius: var(--r); font-weight: 600; }
+.undo:hover { background: var(--press); }
+.undo:active { transform: translateY(1px) scale(.98); }
+.task.done .due { display: none; }
+.task.done .undo { display: block; }
+.task.done .t-title { color: var(--muted); }
+.task.done .t-title span { background-size: 100% 1.5px; }
+.task.done .t-sub b { color: var(--muted); }
+.none { padding: 18px 0; color: var(--muted); font-size: 17px; }
+.donehead { display: flex; gap: 8px; align-items: baseline; margin-top: 18px; padding-bottom: 5px; font: 600 21px/1.2 var(--sign); border-bottom: 1.5px solid var(--box); }
+.donehead span { font-weight: 500; color: var(--muted); }
+#donelist .task { min-height: 60px; }
+
+/* Events: each row's rule is the day itself, with that Event inked in at true scale */
+.ev { position: relative; display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; min-height: 68px; padding: 9px 0 13px; }
+.ev::before { content: ""; position: absolute; left: 0; right: 0; bottom: 2px; height: 1px; background: var(--line); }
+.ev::after { content: ""; position: absolute; bottom: 0; height: 5px; left: calc((var(--from) - var(--t0)) / var(--span) * 100%); width: calc((var(--to) - var(--from)) / var(--span) * 100%); background: var(--seg); }
+.ev time { font: 500 19px/1.2 var(--sign); color: var(--muted); }
+.ev time b { display: block; font-weight: 600; color: var(--ink); }
+.ev .l1 { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.room { font: 600 27px/1.1 var(--sign); white-space: nowrap; }
+.kind { font-weight: 500; white-space: nowrap; }
+.state { margin-left: auto; font-weight: 500; color: var(--muted); white-space: nowrap; }
+.ev .sub { display: block; color: var(--muted); }
+.ev .sub b { font: 600 18px/1 var(--sign); color: var(--ink); margin-right: 3px; }
+.ev.past::after { background: var(--seg-past); }
+.ev.past time b, .ev.past .room, .ev.past .kind, .ev.past .sub b { color: var(--muted); }
+.ev.live::after { background: var(--yellow); box-shadow: inset 0 0 0 1px var(--plate); }
+.chip { margin-left: auto; align-self: center; padding: 0 7px; font: 600 19px/25px var(--sign); border-radius: 3px; }
+.ev.live .chip { background: var(--yellow); color: var(--on-yellow); box-shadow: inset 0 0 0 1.5px var(--plate); }
+.gap { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; align-items: center; min-height: 44px; color: var(--muted); }
+.gap p { grid-column: 2; display: flex; align-items: center; font-weight: 500; }
+.gap .chip { display: none; box-shadow: inset 0 0 0 1.5px var(--ink); color: var(--ink); }
+[data-state=free] .gap p { color: var(--ink); font-weight: 600; }
+[data-state=free] .gap .chip { display: block; }
+
+/* the exam: rare and high stakes, so it is the one ink slab on the page */
+.tomorrow { margin-top: 20px; }
+.tomorrow h3 { display: inline-flex; align-items: center; height: 34px; padding: 0 12px; font: 600 21px/1 var(--sign); background: var(--slab); color: var(--slab-ink); border-radius: var(--r) var(--r) 0 0; vertical-align: bottom; }
+.slab { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; padding: 11px 12px 12px; background: var(--slab); color: var(--slab-ink); border-radius: 0 var(--r) var(--r) var(--r); }
+.slab time { grid-row: span 2; font: 500 19px/1.2 var(--sign); color: var(--slab-muted); }
+.slab > div { grid-column: 2; }
+.slab time b { display: block; font-weight: 600; color: var(--slab-ink); }
+.slab .room { font-size: 36px; line-height: 1; }
+.slab .kind { display: block; font: 600 23px/1.15 var(--sign); margin-top: 4px; }
+.slab .sub { color: var(--slab-muted); }
+.slab .sub b { font: 600 18px/1 var(--sign); color: var(--slab-ink); margin-right: 3px; }
+
+.proto { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 20px 0 0; padding-inline: var(--edge); color: var(--muted); }
+.proto a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 8px; text-decoration: underline; text-underline-offset: 3px; }
+.proto a[aria-current] { color: var(--ink); font-weight: 600; text-decoration: none; }
+.proto button { display: inline-flex; align-items: center; min-height: 44px; padding: 0 8px; text-decoration: underline; text-underline-offset: 3px; }
+.proto button[aria-pressed=true] { color: var(--ink); font-weight: 600; text-decoration: none; }
+
+/* dock (phone) */
+.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; align-items: stretch; gap: 2px; padding: 8px 12px max(8px, env(safe-area-inset-bottom)); background: var(--paper); border-top: 1.5px solid var(--plate); }
+.dock a { flex: 1; display: grid; justify-items: center; align-content: center; gap: 1px; min-height: 56px; font: 500 17px/1.1 var(--sign); color: var(--muted); border-radius: var(--r); }
+.dock a[aria-current] { color: var(--ink); font-weight: 600; }
+.dock a:active { background: var(--press); }
+.add { display: flex; align-items: center; justify-content: center; gap: 6px; height: 56px; background: var(--plate); color: var(--chalk); border-radius: var(--r); font: 600 22px/1 var(--sign); transition: border-radius 120ms; }
+.add:active { transform: translateY(1px) scale(.98); }
+.add.open { border-top-left-radius: 0; border-top-right-radius: 0; }
+.dock .add { flex: 0 0 96px; margin-left: 6px; }
+
+/* Add: the plate again, grown out of the button that opened it */
+#addmenu {
+  position: fixed; inset: auto 12px calc(56px + max(8px, env(safe-area-inset-bottom))) 12px; width: auto; margin: 0; border: 0; padding: 4px 4px 0;
+  background: var(--plate); color: var(--chalk); border-radius: var(--r) var(--r) 0 var(--r);
+  transition: transform 180ms var(--slide), opacity 120ms linear, display 180ms allow-discrete, overlay 180ms allow-discrete;
+}
+#addmenu:not(:popover-open) { transform: translateY(10px); opacity: 0; }
+@starting-style { #addmenu:popover-open { transform: translateY(10px); opacity: 0; } }
+.pick { display: grid; width: 100%; text-align: left; padding: 9px 12px 10px; min-height: 68px; border-radius: 3px; border-bottom: 1px solid var(--chalk-line); }
+.pick:last-child { border-bottom: 0; }
+.pick:hover, .pick:active { background: var(--socket); }
+.pick b { font: 600 28px/1.1 var(--sign); }
+.pick span { color: var(--chalk-muted); }
+
+@media (max-width: 359px) {
+  .top { padding-bottom: 52px; }
+  .tabs { left: 0; justify-content: flex-start; }
+}
+
+/* desktop */
+@media (min-width: 900px) {
+  :root { --lab: 56px; --edge: 24px; }
+  .app { display: grid; grid-template-columns: 248px minmax(0, 1fr); }
+  .dock { display: none; }
+  .rail { display: flex; flex-direction: column; gap: 18px; position: sticky; top: 0; height: 100dvh; padding: 20px 16px; border-right: 1px solid var(--line); }
+  .mark { font: 600 30px/1 var(--sign); padding: 2px 8px 0; }
+  .rail .add { width: 100%; height: 48px; font-size: 21px; }
+  .rail nav a { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 8px; border-radius: var(--r); font-weight: 500; color: var(--muted); }
+  .rail nav a:hover { background: var(--press); color: var(--ink); }
+  .rail nav a[aria-current] { color: var(--ink); font-weight: 600; background: var(--press); }
+  .rail h2 { font: 600 20px/1.3 var(--sign); color: var(--muted); padding: 0 8px 4px; }
+  .rail li a { display: block; padding: 5px 8px 6px; min-height: 44px; border-radius: var(--r); line-height: 1.2; }
+  .rail li a:hover { background: var(--press); }
+  .rail li b { display: block; font: 600 19px/1.1 var(--sign); }
+  .rail li span { color: var(--muted); }
+
+  main { width: 100%; padding: 0 32px 24px; }
+  .top { min-height: 68px; padding: 12px 24px 12px; align-items: center; }
+  .top h1 { font-size: 26px; }
+  .top h1 span { display: inline; font-size: 26px; font-weight: 400; margin-left: 6px; }
+  .top .sem { display: none; }
+  .tab { height: 44px; font-size: 21px; padding: 0 14px; max-width: 220px; }
+
+  .plate { grid-template-columns: 1fr 1fr; padding: 4px; }
+  .slot, .next { padding: 12px 20px 14px; }
+  .next { padding-left: 24px; }
+  .label { font-size: 22px; }
+  .label > b { font-size: 26px; }
+  .code, .now .code, [data-state=free] .now .code { font-size: min(116px, calc(100cqi / 3.72)); line-height: 1; margin: 2px 0 4px; }
+  .cap { font-size: 17px; }
+
+  .ruler { margin-top: 8px; }
+  .scale { height: 28px; }
+  .tick { display: block; position: absolute; left: calc((var(--at) - var(--t0)) / var(--span) * 100%); top: 0; padding-left: 4px; font: 500 17px/24px var(--sign); color: var(--muted); }
+  .tick::after { content: ""; position: absolute; left: 0; top: 4px; width: 1px; height: 124px; background: var(--line); }
+  .tick.last { padding: 0 4px 0 0; transform: translateX(-100%); }
+  .tick.last::after { left: auto; right: 0; }
+  [data-state=live] .tick.at12, [data-state=free] .tick.at13 { visibility: hidden; }
+  .nowtag { height: 24px; font-size: 19px; line-height: 24px; }
+  .lane, .lane.fri { display: block; height: 50px; border-top: 1px solid var(--line); }
+  .lane.fri { border-bottom: 1px solid var(--line); }
+  .lane::before { display: none; }
+  .nowline { top: 22px; height: 56px; }
+  .bar { top: 3px; bottom: 3px; }
+  .bar .txt { display: block; position: relative; padding: 3px 8px; }
+  .bar .txt span { display: block; }
+  .under { display: none; }
+  .names { display: grid; grid-template-rows: 50px 50px; grid-column: 1; margin-top: 28px; font: 600 19px/1 var(--sign); }
+  .names span { display: flex; align-items: center; }
+  .gaplabel { display: block; position: absolute; top: 3px; bottom: 3px; left: calc((750 - var(--t0)) / var(--span) * 100%); width: calc(120 / var(--span) * 100%); text-align: center; font: 500 17px/38px var(--sign); color: var(--muted); }
+  .gaplabel span { position: relative; z-index: 1; padding: 0 6px; background: var(--paper); }
+  [data-state=free] .gaplabel { color: var(--ink); text-align: right; }
+
+  /* the plate split and the column gutter share one centre line, and text shares one edge */
+  .cols { grid-template-columns: 1fr 1fr; gap: 0; margin-top: 14px; }
+  .task { min-height: 58px; padding-block: 4px; }
+  .ev { min-height: 58px; padding: 5px 0 10px; }
+  .gap { min-height: 36px; }
+  .ev .l1 { gap: 10px; }
+  .ev .sub { margin-top: -2px; }
+  .tomorrow { margin-top: 14px; }
+  .slab { grid-template-columns: 52px auto minmax(0, 1fr); align-items: center; padding: 9px 12px 10px; }
+  .slab .kind { margin-top: 0; }
+  .slab time { grid-row: auto; }
+  .slab > div { grid-column: auto; }
+  .proto { padding-left: 16px; }
+
+  #addmenu { inset: 116px auto auto 16px; width: 215px; border-radius: 0 0 var(--r) var(--r); }
+  #addmenu:not(:popover-open) { transform: translateY(-6px); }
+  @starting-style { #addmenu:popover-open { transform: translateY(-6px); opacity: 0; } }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after, ::backdrop { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+  <symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="calendar" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></symbol>
+  <symbol id="book" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7ZM14 2v4a2 2 0 0 0 2 2h4M16 13H8M16 17H8M10 9H8"/></symbol>
+  <symbol id="alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3M12 9v4M12 17h.01"/></symbol>
+</defs></svg>
+
+<div class="app">
+  <aside class="rail">
+    <div class="mark">Chronos</div>
+    <button class="add" data-add popovertarget="addmenu" type="button"><svg class="i" aria-hidden="true"><use href="#plus"/></svg>Add</button>
+    <nav aria-label="Main">
+      <a href="#" aria-current="page"><svg class="i" aria-hidden="true"><use href="#clock"/></svg>Today</a>
+      <a href="#"><svg class="i" aria-hidden="true"><use href="#calendar"/></svg>Calendar</a>
+      <a href="#"><svg class="i" aria-hidden="true"><use href="#book"/></svg>Subjects</a>
+      <a href="#"><svg class="i" aria-hidden="true"><use href="#file"/></svg>Notes</a>
+    </nav>
+    <div>
+      <h2>Semester B261</h2>
+      <ul>
+        <li><a href="#"><b>BI-OSY</b><span>Operační systémy</span></a></li>
+        <li><a href="#"><b>BI-PSI</b><span>Počítačové sítě</span></a></li>
+        <li><a href="#"><b>BI-AAG</b><span>Automaty a gramatiky</span></a></li>
+        <li><a href="#"><b>BI-SP1</b><span>Softwarový projekt 1</span></a></li>
+        <li><a href="#"><b>BI-ZUM</b><span>Základy umělé inteligence</span></a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main>
+    <header class="top">
+      <h1>Thursday <span>5 November</span></h1><span class="sem">B261</span>
+    </header>
+
+    <div class="route tabbed" id="route">
+      <div class="tabs">
+        <a class="tab over" href="#tasks" id="tab-over"><svg class="i" aria-hidden="true"><use href="#alert"/></svg><span class="roll">1 overdue</span></a>
+        <a class="tab due" href="#tasks" id="tab-due"><span class="roll">1 due today</span></a>
+      </div>
+      <section class="plate" aria-label="Where you are and where to go next">
+        <div class="slot now">
+          <i class="spent"></i>
+          <div class="label"><b>Now</b><span><span data-free="until 14:30">until 12:30</span><b data-free="1 h 25 min">50 min left</b></span></div>
+          <div class="code" data-free="Free">T9:350</div>
+          <div class="cap" data-free="No Event right now"><span><b>BI-PSI</b> Počítačové sítě</span><span>Lab</span></div>
+        </div>
+        <div class="slot next">
+          <div class="label"><b>Next 14:30</b><span><span data-free="in 1 h 25 min">in 2 h 50 min</span><span data-free="">T9 → TH</span></span></div>
+          <div class="code">TH:A-1442</div>
+          <div class="cap"><div><b>BI-AAG</b> Automaty a gramatiky</div><span>Lecture</span></div>
+        </div>
+      </section>
+    </div>
+
+    <section class="ruler" id="ruler" role="img" aria-label="Timetable to scale. Today: BI-OSY finished, BI-PSI live until 12:30, 2 hours free, then BI-AAG at 14:30 and BI-SP1 at 16:15. Friday: BI-ZUM midterm exam at 09:00.">
+      <div class="names" aria-hidden="true"><span>Thu</span><span>Fri</span></div>
+      <div class="lanes" aria-hidden="true">
+        <div class="scale">
+          <span class="tick" style="--at:540">09:00</span><span class="tick" style="--at:600">10:00</span><span class="tick" style="--at:660">11:00</span><span class="tick at12" style="--at:720">12:00</span><span class="tick at13" style="--at:780">13:00</span><span class="tick" style="--at:840">14:00</span><span class="tick" style="--at:900">15:00</span><span class="tick" style="--at:960">16:00</span><span class="tick last" style="--at:1020">17:00</span>
+          <span class="nowtag" id="nowtag">11:40</span>
+        </div>
+        <div class="nowline"></div>
+        <div class="lane thu">
+          <div class="bar past" style="--from:555;--to:645"><span class="txt"><b>BI-OSY</b> Lecture<span>TH:A-1242</span></span></div>
+          <div class="bar live" id="bar-psi" style="--from:660;--to:750"><i class="fill"></i><span class="txt"><b>BI-PSI</b> Lab<span>T9:350</span></span></div>
+          <div class="gaplabel"><span data-free="Free until 14:30">2 h free</span></div>
+          <div class="bar up" style="--from:870;--to:960"><span class="txt"><b>BI-AAG</b> Lecture<span>TH:A-1442</span></span></div>
+          <div class="bar up" style="--from:975;--to:1020"><span class="txt"><b>BI-SP1</b><span>T9:105</span></span></div>
+        </div>
+        <div class="lane fri">
+          <div class="bar exam" style="--from:540;--to:630"><span class="txt"><b>BI-ZUM</b> Midterm exam<span>TH:A-1242</span></span></div>
+        </div>
+        <div class="under">
+          <span class="past" style="--from:555"><b>BI-OSY</b>09:15</span>
+          <span id="under-psi" style="--from:660"><b>BI-PSI</b>11:00</span>
+          <span style="--from:785"><i>2 h free</i></span>
+          <span style="--from:870"><b>BI-AAG</b>14:30</span>
+          <span class="end"><b>BI-SP1</b>16:15</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="cols">
+      <section class="col" id="tasks">
+        <div class="head"><h2>Tasks <span class="n roll" id="count">4</span></h2></div>
+        <ul id="tasklist">
+          <li class="task" data-i="0" data-burn="overdue" data-name="Homework 3">
+            <label class="tick-box"><input type="checkbox" aria-label="Homework 3, BI-OSY, overdue since yesterday"><b><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></b></label>
+            <a class="t-link" href="#"><span class="t-title"><span>Homework 3</span></span><span class="t-sub"><b>BI-OSY</b> Operační systémy</span></a>
+            <span class="due l0"><span class="flag"><svg class="i" aria-hidden="true"><use href="#alert"/></svg>Overdue</span><small>Yesterday</small></span>
+            <button class="undo" type="button">Undo</button>
+          </li>
+          <li class="task" data-i="1" data-burn="today" data-name="Lab report">
+            <label class="tick-box"><input type="checkbox" aria-label="Lab report, BI-PSI, due today 23:59"><b><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></b></label>
+            <a class="t-link" href="#"><span class="t-title"><span>Lab report</span></span><span class="t-sub"><b>BI-PSI</b> Počítačové sítě</span></a>
+            <span class="due l1">Today<small>23:59</small></span>
+            <button class="undo" type="button">Undo</button>
+          </li>
+          <li class="task" data-i="2" data-name="Finish the slides">
+            <label class="tick-box"><input type="checkbox" aria-label="Finish the slides, BI-SP1, due Friday"><b><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></b></label>
+            <a class="t-link" href="#"><span class="t-title"><span>Finish the slides</span></span><span class="t-sub"><b>BI-SP1</b> Softwarový projekt 1</span></a>
+            <span class="due l2">Friday<small>6 Nov</small></span>
+            <button class="undo" type="button">Undo</button>
+          </li>
+          <li class="task" data-i="3" data-name="Problem set 5">
+            <label class="tick-box"><input type="checkbox" aria-label="Problem set 5, BI-AAG, due Monday"><b><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></b></label>
+            <a class="t-link" href="#"><span class="t-title"><span>Problem set 5</span></span><span class="t-sub"><b>BI-AAG</b> Automaty a gramatiky</span></a>
+            <span class="due l3">Monday<small>9 Nov</small></span>
+            <button class="undo" type="button">Undo</button>
+          </li>
+        </ul>
+        <p class="none" id="none" hidden>No Tasks due soon</p>
+        <div id="done" hidden>
+          <h3 class="donehead">Done today <span id="donecount"></span></h3>
+          <ul id="donelist"></ul>
+        </div>
+      </section>
+
+      <section class="col" id="events">
+        <div class="head"><h2>Events <span class="n">4</span></h2></div>
+        <ul>
+          <li class="ev past" style="--from:555;--to:645"><time><b>09:15</b>10:45</time><div><div class="l1"><span class="room">TH:A-1242</span><span class="kind">Lecture</span><span class="state">Finished</span></div><span class="sub"><b>BI-OSY</b> Operační systémy</span></div></li>
+          <li class="ev live" id="ev-psi" style="--from:660;--to:750"><time><b>11:00</b>12:30</time><div><div class="l1"><span class="room">T9:350</span><span class="kind">Lab</span><span class="chip">Now</span><span class="state" hidden>Finished</span></div><span class="sub"><b>BI-PSI</b> Počítačové sítě</span></div></li>
+          <li class="gap"><p><span data-free="Free until 14:30">2 h free</span><span class="chip">Now</span></p></li>
+          <li class="ev" style="--from:870;--to:960"><time><b>14:30</b>16:00</time><div><div class="l1"><span class="room">TH:A-1442</span><span class="kind">Lecture</span></div><span class="sub"><b>BI-AAG</b> Automaty a gramatiky</span></div></li>
+          <li class="ev" style="--from:975;--to:1020"><time><b>16:15</b>17:00</time><div><div class="l1"><span class="room">T9:105</span><span class="kind">Project presentation</span></div><span class="sub"><b>BI-SP1</b> Softwarový projekt 1</span></div></li>
+        </ul>
+        <div class="tomorrow">
+          <h3>Tomorrow, Friday</h3>
+          <div class="slab">
+            <time><b>09:00</b>10:30</time>
+            <span class="room">TH:A-1242</span>
+            <div><span class="kind">Midterm exam</span><span class="sub"><b>BI-ZUM</b> Základy umělé inteligence</span></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <p class="proto">Prototype: <a href="#live" id="p-live">Live Event</a><a href="#free" id="p-free">No Event live</a></p>
+    <p class="proto">Theme: <button type="button" data-pick="auto">System</button><button type="button" data-pick="oled-leaf">Black</button><button type="button" data-pick="white-leaf">Light</button></p>
+  </main>
+
+  <nav class="dock" aria-label="Main">
+    <a href="#" aria-current="page"><svg class="i" aria-hidden="true"><use href="#clock"/></svg>Today</a>
+    <a href="#"><svg class="i" aria-hidden="true"><use href="#calendar"/></svg>Calendar</a>
+    <a href="#"><svg class="i" aria-hidden="true"><use href="#book"/></svg>Subjects</a>
+    <a href="#"><svg class="i" aria-hidden="true"><use href="#file"/></svg>Notes</a>
+    <button class="add" data-add popovertarget="addmenu" type="button"><svg class="i" aria-hidden="true"><use href="#plus"/></svg>Add</button>
+  </nav>
+</div>
+
+<div id="addmenu" popover="auto" role="menu" aria-label="Add">
+  <button class="pick" role="menuitem" type="button"><b>Task</b><span>Something to tick off, with a due date</span></button>
+  <button class="pick" role="menuitem" type="button"><b>Event</b><span>Lecture, lab, exam or presentation</span></button>
+  <button class="pick" role="menuitem" type="button"><b>Note</b><span>A free-form page</span></button>
+</div>
+
+<p class="vh" id="say" role="status"></p>
+
+<script>
+(function () {
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var calm = matchMedia('(prefers-reduced-motion: reduce)');
+  var free = document.documentElement.dataset.state === 'free';
+  var clock = free ? '13:05' : '11:40';
+
+  /* prototype state: the clock stands at 13:05, between BI-PSI and BI-AAG */
+  if (free) {
+    $$('[data-free]').forEach(function (el) { el.textContent = el.dataset.free; });
+    $('#nowtag').textContent = clock;
+    $('#bar-psi').className = 'bar past';
+    $('#bar-psi .fill').remove();
+    $('#under-psi').className = 'past';
+    var ev = $('#ev-psi');
+    ev.classList.replace('live', 'past');
+    $('.chip', ev).remove();
+    $('.state', ev).hidden = false;
+    $('#ruler').setAttribute('aria-label', 'Timetable to scale. Today: BI-OSY and BI-PSI finished, free now until 14:30, then BI-AAG at 14:30 and BI-SP1 at 16:15. Friday: BI-ZUM midterm exam at 09:00.');
+  }
+  $(free ? '#p-free' : '#p-live').setAttribute('aria-current', 'true');
+  function showPick() {
+    var pick = document.documentElement.dataset.pick;
+    $$('button[data-pick]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.pick === pick)); });
+  }
+  $$('button[data-pick]').forEach(function (b) {
+    b.addEventListener('click', function () { window.chronosTheme(b.dataset.pick); showPick(); });
+  });
+  showPick();
+
+  /* a room code must fit its slot whatever face is on screen */
+  function fit() {
+    $$('.code').forEach(function (c) {
+      c.style.fontSize = '';
+      var g = document.createRange(); g.selectNodeContents(c);
+      var w = g.getBoundingClientRect().width, room = c.clientWidth;
+      if (w > room) c.style.fontSize = Math.floor(parseFloat(getComputedStyle(c).fontSize) * room / w) + 'px';
+    });
+  }
+  fit();
+  addEventListener('resize', fit);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+
+  /* Tasks */
+  var list = $('#tasklist'), doneList = $('#donelist'), done = $('#done');
+  var tabOver = $('#tab-over'), tabDue = $('#tab-due'), route = $('#route');
+  var settleTimer = 0;
+
+  function setText(el, text) {
+    if (el.textContent === text) return;
+    el.textContent = text;
+    el.classList.remove('go'); void el.offsetWidth; el.classList.add('go');
+  }
+
+  // every count comes from the rows still open
+  function refresh() {
+    var open = $$('.task').filter(function (t) { return !$('input', t).checked; });
+    var over = open.filter(function (t) { return t.dataset.burn === 'overdue'; }).length;
+    var today = open.filter(function (t) { return t.dataset.burn === 'today'; }).length;
+    if (over) setText($('.roll', tabOver), over + ' overdue');
+    if (today) setText($('.roll', tabDue), today + ' due today');
+    tabOver.classList.toggle('gone', !over);
+    tabDue.classList.toggle('gone', !today);
+    route.classList.toggle('tabbed', !!(over || today));
+    setText($('#count'), open.length ? String(open.length) : '');
+    var settled = doneList.children.length;
+    done.hidden = !settled;
+    $('#donecount').textContent = settled;
+    $('#none').hidden = list.children.length > 0;
+  }
+
+  function complete(row) {
+    var sub = $('.t-sub', row);
+    row._sub = sub.innerHTML;
+    sub.textContent = 'Done at ' + clock;
+    row.classList.add('done');
+    $('#say').textContent = row.dataset.name + ' done. Undo is on the row.';
+    refresh();
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(settle, 4000);
+  }
+
+  // finished rows stay where they were ticked, then go to Done today together
+  function settle() {
+    var rows = $$('.task.done', list);
+    if (!rows.length) return;
+    var focused = rows.some(function (r) { return r.contains(document.activeElement); });
+    rows.forEach(function (row) { row.style.height = row.offsetHeight + 'px'; });
+    void list.offsetHeight;
+    rows.forEach(function (row) { row.classList.add('leaving'); row.style.height = '0px'; });
+    setTimeout(function () {
+      rows.forEach(function (row) {
+        if (!row.classList.contains('leaving')) return;
+        row.classList.remove('leaving'); row.style.height = '';
+        doneList.prepend(row);
+      });
+      refresh();
+      if (focused) { var box = $('#tasklist input') || $('#donelist input'); if (box) box.focus({ preventScroll: true }); }
+    }, calm.matches ? 0 : 230);
+  }
+
+  function restore(row) {
+    $('input', row).checked = false;
+    row.classList.remove('done', 'leaving');
+    row.style.height = '';
+    if (row._sub) $('.t-sub', row).innerHTML = row._sub;
+    if (row.parentNode !== list) {
+      var after = $$('.task', list).filter(function (t) { return +t.dataset.i > +row.dataset.i; })[0];
+      list.insertBefore(row, after || null);
+    }
+    $('#say').textContent = row.dataset.name + ' back in Tasks.';
+    refresh();
+  }
+
+  $$('.task').forEach(function (row) {
+    var box = $('input', row);
+    box.addEventListener('change', function () { if (box.checked) complete(row); else restore(row); });
+    $('.undo', row).addEventListener('click', function () { restore(row); box.focus({ preventScroll: true }); });
+  });
+
+  /* Add */
+  var menu = $('#addmenu');
+  menu.addEventListener('toggle', function (e) {
+    var open = e.newState === 'open';
+    $$('[data-add]').forEach(function (b) { b.classList.toggle('open', open); b.setAttribute('aria-expanded', open); });
+    if (open) $('.pick', menu).focus({ preventScroll: true });
+  });
+  $$('.pick', menu).forEach(function (b) { b.addEventListener('click', function () { menu.hidePopover(); }); });
+
+  // inert destinations in this build
+  $$('a[href="#"]').forEach(function (a) { a.addEventListener('click', function (e) { e.preventDefault(); }); });
+})();
+</script>
+</body>
+</html>
