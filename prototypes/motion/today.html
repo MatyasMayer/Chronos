@@ -7,6 +7,7 @@
 <title>Chronos motion prototype</title>
 <meta name="theme-color" content="#F1F2EC">
 <script>
+  try { if (window.self !== window.top) document.documentElement.classList.add('framed'); } catch (e) { document.documentElement.classList.add('framed'); }
   // The theme follows the system until a theme is picked. #free shows the gap between Events.
   (function () {
     var q = new URLSearchParams(location.search), r = document.documentElement;
@@ -124,6 +125,8 @@ svg.i { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor;
 /* shell */
 .rail { display: none; }
 main { padding: env(safe-area-inset-top) 12px calc(104px + env(safe-area-inset-bottom)); max-width: 1240px; margin: 0 auto; }
+/* inside another app's frame the host already keeps clear of the notch, so the page must not add that space again */
+.framed main { padding-top: 0; }
 
 /* header */
 .top { display: flex; align-items: flex-end; min-height: 58px; padding: 6px 4px 8px; line-height: 1.2; }
