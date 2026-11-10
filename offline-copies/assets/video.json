@@ -1,0 +1,18 @@
+{
+ "name": "test-video.mp4",
+ "type": "video/mp4",
+ "size": 1510863161,
+ "durationSeconds": 1000,
+ "head": {
+  "url": "video-head.bin",
+  "size": 145261,
+  "sha256": "3799c96eb0497b714a9f9a96c0946ae1e1cac71e0b6925be5e9c1f28beeb9ad0"
+ },
+ "loop": {
+  "url": "video-loop.bin",
+  "size": 15107179,
+  "sha256": "8eb5d0f7a2608867592399e6c155e75e10f587e2202fc40a97da67ec3ef0e631",
+  "count": 100
+ },
+ "sha256": "e085c5b8ede10ce45157bfeb628e6b1f9fdfb78d7342f093ad9a3b98d27b84d1"
+}

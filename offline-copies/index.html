@@ -1,0 +1,187 @@
+<!doctype html>
+<!-- Throwaway test page for the wayfinder ticket "Do large Offline copies hold up on real devices?". Not part of Chronos. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Offline copies test</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Offline Test">
+<style>
+  :root { color-scheme: light dark; --line: #8884; --accent: #0f766e; }
+  * { box-sizing: border-box; }
+  body { margin: 0 auto; max-width: 680px; font: 16px/1.45 system-ui, sans-serif;
+         padding: max(16px, env(safe-area-inset-top)) 16px 120px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 0 0 6px; }
+  p { margin: 0 0 10px; }
+  ol { margin: 0 0 10px; padding-left: 22px; }
+  section { border-top: 1px solid var(--line); padding: 16px 0; }
+  .hint { font-size: 14px; opacity: .75; }
+  .context { font-weight: 600; color: var(--accent); }
+  button, input, select, textarea { font: inherit; border-radius: 10px; border: 1px solid var(--line); padding: 10px 12px; }
+  button { background: var(--accent); color: #fff; border: 0; margin: 0 6px 8px 0; min-height: 44px; }
+  button.quiet { background: transparent; color: inherit; border: 1px solid var(--line); }
+  button.danger { background: #b91c1c; }
+  button:disabled { opacity: .4; }
+  input, select { background: transparent; color: inherit; margin: 0 6px 8px 0; }
+  input[type=number] { width: 90px; }
+  input[type=text] { width: 100%; }
+  label { display: inline-flex; align-items: center; gap: 6px; margin: 0 10px 8px 0; }
+  video, canvas { width: 100%; background: #000; border-radius: 8px; display: block; margin-bottom: 8px; }
+  canvas { background: #fff; height: auto; }
+  pre, #env, #files { font: 12px/1.45 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+  pre { max-height: 320px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+  #files div { padding: 6px 0; border-bottom: 1px dashed var(--line); }
+  #files button { min-height: 32px; padding: 4px 10px; font-size: 13px; margin-bottom: 2px; }
+  .obs { margin: 4px 0 8px; font-size: 14px; }
+  .obs button { min-height: 34px; padding: 4px 12px; margin-bottom: 4px; }
+  .obs .picked { outline: 3px solid var(--accent); }
+  #bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 8px 16px max(8px, env(safe-area-inset-bottom));
+         background: Canvas; border-top: 1px solid var(--line); font: 13px/1.4 ui-monospace, Consolas, monospace; overflow-wrap: anywhere; }
+  #progress { color: var(--accent); min-height: 1.4em; }
+</style>
+</head>
+<body>
+<h1>Offline copies test</h1>
+<p class="hint">Throwaway page for Chronos. It has no server, so results stay on this device until you copy the report at the bottom. Everything you do is logged and the log survives closing the app.</p>
+<p>This window is <span class="context" id="context"></span></p>
+
+<section>
+  <h2>This device</h2>
+  <div id="env"></div>
+  <button id="persist">Ask for persistent storage</button>
+  <button id="refresh" class="quiet">Refresh</button>
+  <p class="hint">Files in this app's private storage (OPFS):</p>
+  <div id="files"></div>
+</section>
+
+<section>
+  <h2>1. Download, kill and resume</h2>
+  <p class="hint">Downloads in 8 MiB Range requests and writes each chunk in place. The video is a real, seekable MP4 of 1.4 GiB (16:40 long).</p>
+  <select id="dl-which">
+    <option value="video">Test video, 1.4 GiB</option>
+    <option value="raw">Raw file, 4.2 GiB (not a video)</option>
+  </select>
+  <label><input type="checkbox" id="wake"> Keep screen on (wake lock)</label><br>
+  <button id="dl-start">Start or resume</button>
+  <button id="dl-stop" class="quiet">Pause</button>
+  <button id="dl-verify" class="quiet">Check every byte</button>
+  <ol class="hint">
+    <li><b>Kill and resume:</b> start, wait for about 30%, swipe the app away, reopen it, tap Start again. It should continue, not restart. Let it finish and tap Check every byte.</li>
+    <li><b>App switch:</b> delete the file, start again, switch to another app for a minute, come back. The log says whether chunks kept arriving.</li>
+    <li><b>Screen lock:</b> same, but lock the phone for a minute.</li>
+    <li><b>Wake lock:</b> tick Keep screen on and leave the phone alone for two minutes. Does the screen stay on?</li>
+  </ol>
+  <div class="obs" data-q="With the wake lock on, the screen stayed on for 2 minutes"></div>
+</section>
+
+<section>
+  <h2>2. Video play and seek</h2>
+  <p class="hint">Needs the finished test video. Turn on <b>Airplane mode</b> first. Try each route: tap it, press play, run the seek test, then drag the scrubber around yourself and let it play for a few minutes.</p>
+  <video id="video" controls playsinline muted></video>
+  <button data-route="blob">Route A: Blob URL</button>
+  <button data-route="sw4">Route B: service worker, 4 MiB cap</button>
+  <button data-route="sw0" class="danger">Route B without a cap (may crash)</button><br>
+  <button id="seek-test" class="quiet">Run seek test</button>
+  <button id="video-unload" class="quiet">Unload video</button>
+  <div class="obs" data-q="Route A (Blob URL): plays and seeks smoothly by hand"></div>
+  <div class="obs" data-q="Route B (service worker, 4 MiB cap): plays and seeks smoothly by hand"></div>
+  <div class="obs" data-q="Route B without a cap: survived without a crash or reload"></div>
+</section>
+
+<section>
+  <h2>3. Storage limit and survival</h2>
+  <p class="hint"><b>Survival:</b> leave the finished video in place and don't open this app for 8 days or more. Then open it and tap Check every byte in section 1. Each launch is logged with the time since the last one.</p>
+  <p class="hint"><b>Limit:</b> writes 1 GiB filler files until the cap or until the device refuses. This really uses the space, so pick a cap you can spare, and delete the fillers after.</p>
+  <label>Cap in GiB <input type="number" id="fill-cap" value="4" min="1" max="200"></label>
+  <button id="fill-start">Fill storage</button>
+  <button id="fill-stop" class="quiet">Stop</button>
+  <button id="fill-clear" class="quiet">Delete fillers</button>
+</section>
+
+<section>
+  <h2>4. PDF</h2>
+  <p class="hint">Builds a 300-page, 180 MiB PDF on this device (needs to be online once, for one picture). Then turn on Airplane mode.</p>
+  <button id="pdf-make">Build the test PDF</button><br>
+  <button data-pdf="sw">pdf.js through the service worker</button>
+  <button data-pdf="slice">pdf.js reading the file directly</button>
+  <div id="pdf-ui" hidden>
+    <canvas id="pdf-canvas"></canvas>
+    <button id="pdf-prev" class="quiet">Previous</button>
+    <button id="pdf-next" class="quiet">Next</button>
+    <label>Page <input type="number" id="pdf-page" value="1" min="1"></label>
+    <button id="pdf-go" class="quiet">Go</button><br>
+    <button id="pdf-flip" class="quiet">Flip through 60 pages</button>
+    <button id="pdf-search" class="quiet">Search for "zebra-287"</button>
+  </div>
+  <p class="hint">Built-in viewer: these leave the page. Check that the PDF shows, that you can scroll all pages, and that you can get back.</p>
+  <button data-open="pdf:sw" class="quiet">Open through service worker</button>
+  <button data-open="pdf:blob" class="quiet">Open as Blob URL</button>
+  <button data-open="pdf:sw-tab" class="quiet">Open in a new window</button>
+  <div class="obs" data-q="pdf.js: scrolling and flipping felt fine, no reload"></div>
+  <div class="obs" data-q="Built-in PDF viewer through service worker: all pages show, offline"></div>
+  <div class="obs" data-q="Built-in PDF viewer from Blob URL: all pages show, offline"></div>
+  <div class="obs" data-q="Built-in PDF viewer: there was a way back to the app"></div>
+</section>
+
+<section>
+  <h2>5. PPTX</h2>
+  <p class="hint">Fetches a 12-slide test deck into storage (online once). Then, in Airplane mode, try each way to open it. Does Quick Look show the slides?</p>
+  <button id="pptx-get">Get the test PPTX</button><br>
+  <button data-open="pptx:sw" class="quiet">Open through service worker</button>
+  <button data-open="pptx:blob" class="quiet">Open as Blob URL</button>
+  <button data-open="pptx:sw-tab" class="quiet">Open in a new window</button>
+  <div class="obs" data-q="PPTX through service worker: slides are shown"></div>
+  <div class="obs" data-q="PPTX from Blob URL: slides are shown"></div>
+  <div class="obs" data-q="PPTX in a new window: slides are shown"></div>
+  <div class="obs" data-q="PPTX preview: there was a way back to the app"></div>
+</section>
+
+<section>
+  <h2>6. Saving out</h2>
+  <p class="hint">Needs the finished test video. Save the full 1.4 GiB file to Files, then check in the Files app that it is there with the right size.</p>
+  <button data-save="blob">Save video: download link (Blob URL)</button>
+  <button data-save="sw" class="quiet">Save video: through service worker</button>
+  <div class="obs" data-q="Download link (Blob URL): the 1.4 GiB file arrived in Files / Downloads"></div>
+  <div class="obs" data-q="Download through service worker: the 1.4 GiB file arrived in Files / Downloads"></div>
+  <p class="hint">Share sheet: go up in size until it fails or the app reloads. Each tap is logged before the sheet opens, so a crash still shows in the report. In the sheet choose Save to Files.</p>
+  <span id="share-buttons"></span>
+  <div class="obs" data-q="Share sheet: the largest size worked without a reload"></div>
+</section>
+
+<section>
+  <h2>7. Taking a file back in</h2>
+  <p class="hint">Pick the 1.4 GiB video you saved to Files in section 6 (Choose Files). Compare tells you whether the bytes are unchanged; Copy in measures copying it into storage. Then save the video to Photos (Files app, Share, Save Video) and pick it again from Photo Library: are the bytes changed?</p>
+  <input type="file" id="pick">
+  <div id="picked" class="hint"></div>
+  <button id="pick-compare" disabled>Compare with the test video</button>
+  <button id="pick-import" class="quiet" disabled>Copy into storage</button>
+</section>
+
+<section>
+  <h2>8. Windows only: Background Fetch</h2>
+  <p class="hint">Starts a browser-run download of many 14 MiB pieces. Start it, close this window (leave the browser itself running), wait, reopen and tap Status. Then repeat and quit the browser fully. Edge: try with "Continue running background extensions and apps" on and off.</p>
+  <label>Pieces <input type="number" id="bf-count" value="150" min="1" max="400"></label>
+  <button id="bf-start">Start Background Fetch</button>
+  <button id="bf-status" class="quiet">Status</button>
+  <button id="bf-abort" class="quiet">Abort all</button>
+</section>
+
+<section>
+  <h2>Report</h2>
+  <input type="text" id="note" placeholder="Add a note to the report (what you saw)">
+  <button id="note-add" class="quiet">Add note</button><br>
+  <button id="copy">Copy report</button>
+  <button id="share-report" class="quiet">Share report</button>
+  <button id="clear" class="quiet">Clear log</button>
+  <pre id="log"></pre>
+</section>
+
+<div id="bar"><div id="progress"></div><div id="last"></div></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
