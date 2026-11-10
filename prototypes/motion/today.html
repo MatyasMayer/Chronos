@@ -457,57 +457,190 @@ main { overflow-x: clip; }
 .seg button[aria-pressed=true] { color: var(--chalk); }
 .seg-thumb { position: absolute; top: 2px; bottom: 2px; left: 0; width: 0; background: var(--plate); border-radius: 4px; transition: transform calc(var(--t-ind) * var(--s-ind)) var(--e-out), width calc(var(--t-ind) * var(--s-ind)) var(--e-out); }
 
-/* calendar */
-.calbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
-.calbar .span { font: 600 23px/1.1 var(--sign); margin-right: auto; min-width: 0; }
-.step { width: 44px; height: 44px; border-radius: var(--r); font: 600 24px/1 var(--sign); color: var(--ink); }
-.step:active { background: var(--press); }
+/* calendar: the look and structure chosen in prototypes/calendar-dashboard (Week rotated, Day Focus, Month Grid,
+   the little calendar). Only the motion belongs to this prototype. */
+.cal { --card: #FFFFFF; --sheet: #FFFFFF; --live-edge: #00612E; }
+[data-mode=oled-leaf] .cal { --card: #141C18; --sheet: #101613; --live-edge: transparent; }
+.cal button { text-align: left; }
+.cal .ctop { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 12px 2px 10px; }
+.cal .ctop h1 { font: 600 30px/1.05 var(--sign); }
+.cal .ctop h1 small { display: block; font: 500 17px/1.2 var(--sign); color: var(--muted); }
+.cal .ctl { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.cal .cnav { display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--r); font: 600 24px/1 var(--sign); }
+.cal .cnav:hover, .cal .chome:hover { background: var(--press); }
+.cal .chome { height: 44px; padding: 0 10px; border-radius: var(--r); font: 600 19px/1 var(--sign); }
+.cal .seg { padding: 3px; }
+.cal .seg button { min-width: 62px; min-height: 38px; padding: 0 10px; text-align: center; }
+.cal .seg button[aria-pressed=true] { color: var(--paper); }
+.cal .seg-thumb { top: 3px; bottom: 3px; background: var(--ink); }
 #calbody { min-width: 0; }
-/* calendar, shared by both looks */
-.k-now { display: inline-block; padding: 0 6px; margin-right: 6px; border-radius: 3px; background: var(--yellow); color: var(--on-yellow); font: 600 16px/22px var(--sign); font-style: normal; }
-.k-marks { display: flex; gap: 3px; justify-content: center; height: 6px; margin-top: 5px; }
-.k-marks em { width: 6px; height: 6px; background: var(--seg); }
-.k-marks em.x { background: var(--slab); }
-.fsel { position: absolute; bottom: -8px; left: 0; width: 0; height: 4px; background: var(--ink); border-radius: 2px; transition: transform calc(var(--t-ind) * var(--s-ind)) var(--e-out), width calc(var(--t-ind) * var(--s-ind)) var(--e-out); }
 
-/* days down, time across, each day a panel */
-.k1-scale { position: relative; height: 22px; margin: 0 8px 4px 64px; }
-.k1-scale span { position: absolute; left: calc((var(--at) - var(--t0)) / var(--span) * 100%); padding-left: 4px; border-left: 1px solid var(--line); font: 500 15px/22px var(--sign); color: var(--muted); }
-.k1-wk { position: relative; display: grid; gap: 6px; }
-.k1-row { display: grid; grid-template-columns: 56px minmax(0, 1fr); width: 100%; min-height: 62px; text-align: left; background: var(--card); border-radius: var(--r); }
-.k1-row.empty { min-height: 42px; }
-.k1-row:active { filter: brightness(1.25); }
-.k1-day { display: grid; place-content: center; text-align: center; font: 500 15px/1.1 var(--sign); color: var(--muted); border-radius: var(--r) 0 0 var(--r); }
-.k1-day b { display: block; font: 600 23px/1 var(--sign); color: var(--ink); }
-.k1-row.today .k1-day { background: var(--plate); color: var(--chalk-muted); }
-.k1-row.today .k1-day b { color: var(--chalk); }
-.k1-lane { position: relative; display: block; margin: 0 8px; }
-.k1-lane > em { position: absolute; inset: 0 auto 0 0; display: grid; align-content: center; font: 500 16px/1 var(--sign); font-style: normal; color: var(--muted); }
-.k1-bar { position: absolute; top: 8px; bottom: 8px; left: calc((var(--from) - var(--t0)) / var(--span) * 100%); width: calc((var(--to) - var(--from)) / var(--span) * 100% - 2px); padding: 5px 6px 0; overflow: hidden; text-align: left; white-space: nowrap; border-radius: 3px; background: var(--bar); color: var(--chalk); font: 600 17px/1.1 var(--sign); }
-.k1-bar small { display: block; margin-top: 2px; font: 500 14px/1 var(--sign); opacity: .8; }
-.k1-bar.past { background: none; box-shadow: inset 0 0 0 1.5px var(--box); color: var(--muted); }
-.k1-bar.live { background: var(--yellow); color: var(--on-yellow); }
-.k1-bar.exam { background: var(--slab); color: var(--slab-ink); }
-.k1-now { position: absolute; z-index: 1; top: 0; bottom: 0; left: calc(64px + (100% - 72px) * (var(--now) - var(--t0)) / var(--span)); width: 2px; margin-left: -1px; background: var(--box); opacity: .45; pointer-events: none; }
-.k1-line { position: absolute; z-index: 2; top: 0; bottom: 0; left: calc((var(--now) - var(--t0)) / var(--span) * 100%); width: 2px; margin-left: -1px; background: var(--ink); }
-.k1-tag { position: absolute; z-index: 3; top: -10px; left: calc((var(--now) - var(--t0)) / var(--span) * 100%); transform: translateX(-50%); padding: 0 5px; border-radius: 3px; background: var(--ink); color: var(--paper); font: 600 16px/20px var(--sign); font-style: normal; }
-.k1-dayview .k1-scale { margin-left: 8px; }
-.k1-focus { height: 92px; padding-bottom: 12px; background: var(--card); border-radius: var(--r); display: grid; }
-.k1-gap { position: absolute; top: 8px; bottom: 8px; left: calc((var(--from) - var(--t0)) / var(--span) * 100%); width: calc((var(--to) - var(--from)) / var(--span) * 100%); display: grid; place-content: center; font: 500 16px/1 var(--sign); color: var(--muted); }
-.dcard { margin-top: 14px; }
-.dcard .kick { color: var(--muted); font: 500 18px/1.3 var(--sign); }
-.dcard h3 { font: 600 30px/1.1 var(--sign); padding: 2px 0 6px; }
-.dcard h3 span { display: block; font: 400 16px/1.35 var(--text); color: var(--muted); }
-.dcard .where { display: inline-block; padding: 3px 9px 4px; border-radius: 3px; box-shadow: inset 0 0 0 1.5px var(--box); font: 600 22px/1.1 var(--sign); }
-.k1-mon { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
-.k1-mon .h { padding: 0 0 2px; text-align: center; font: 500 15px/1.2 var(--sign); color: var(--muted); }
-.k1-tile { display: block; min-height: 56px; padding: 6px 4px 5px; text-align: center; background: var(--card); border-radius: 4px; font: 600 19px/1 var(--sign); }
-.k1-tile i { font-style: normal; display: inline-block; min-width: 26px; padding: 2px 4px; border-radius: 3px; }
-.k1-tile small { display: none; margin-top: 4px; font: 500 15px/1.1 var(--sign); color: var(--muted); }
-.k1-tile.today i { background: var(--plate); color: var(--chalk); }
-.k1-tile.exam small { color: var(--ink); font-weight: 600; }
-.k1-tile:active { filter: brightness(1.25); }
-@media (min-width: 900px) { .k1-tile { min-height: 78px; text-align: left; padding: 8px; } .k1-tile small { display: block; } .k1-tile .k-marks { justify-content: flex-start; } .k1-row { min-height: 68px; } }
+/* one Event, in any structure. Finished hollow, coming green, live yellow, exam ink. */
+.cal .e { position: absolute; display: block; overflow: hidden; padding: 3px 6px; border-radius: 3px; font: 500 16px/1.14 var(--sign); text-align: left; }
+.cal .e b { font-weight: 600; }
+.cal .e span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; }
+.cal .e.up { background: var(--plate); color: var(--chalk); }
+.cal .e.past { background: var(--paper); color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--seg-past); }
+.cal .l-row.today .e.past { background: var(--card); }
+.cal .e.live { background: var(--yellow); color: var(--on-yellow); box-shadow: inset 0 0 0 1.5px var(--live-edge); }
+.cal .e .fill { position: absolute; left: 0; top: 0; background: var(--yellow-spent); }
+.cal .e.exam.up, .cal .e.exam.live { background: var(--slab); color: var(--slab-ink); box-shadow: none; }
+.cal .e.exam b { font-size: 18px; }
+.cal .e.half span:nth-of-type(n+2) { display: none; }
+.cal .e.cx { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--seg-past); }
+.cal .e.cx b { text-decoration: line-through; }
+.cal .e.sel { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* the Task's mark everywhere: a square box */
+.cal .box { position: relative; display: grid; place-items: center; flex: none; width: 24px; height: 24px; cursor: pointer; }
+.cal .box input { position: absolute; inset: -10px; width: 44px; height: 44px; margin: 0; opacity: 0; cursor: pointer; }
+.cal .box b { display: grid; place-items: center; width: 18px; height: 18px; border: 2px solid var(--tickbox); border-radius: 3px; }
+.cal .box svg { width: 13px; height: 13px; fill: none; stroke: var(--chalk); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; visibility: hidden; }
+.cal .box input:checked + b { background: var(--plate); border-color: var(--plate); }
+.cal .box input:checked + b svg { visibility: visible; }
+.cal .box input:focus-visible + b { outline: 2px solid var(--ink); outline-offset: 2px; }
+.cal .tk { display: flex; align-items: center; gap: 4px; min-width: 0; min-height: 28px; }
+.cal .tk > button { min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; line-height: 1.2; }
+.cal .tk.done > button { color: var(--muted); text-decoration: line-through; }
+.cal .tk.over > button { color: var(--alert); font-weight: 600; }
+.cal .flag { display: inline-flex; align-items: center; gap: 3px; height: 24px; padding: 0 6px; background: var(--brick); color: #fff; font: 600 17px/1 var(--sign); border-radius: 3px; white-space: nowrap; }
+.cal .flag svg.i { width: 14px; height: 14px; stroke-width: 2; }
+
+/* Month: the grid. Weekly classes shrink to a count, so exams and deadlines stand out. */
+.cal .m { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.cal .m-wd { padding: 5px 7px; font: 600 18px/1 var(--sign); color: var(--muted); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.cal .m-d { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; width: 100%; min-width: 0; min-height: 122px; padding: 5px 6px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow: hidden; }
+.cal .m-d:hover { background: var(--press); }
+.cal .m-d.other, .cal .m-d.other .m-n { color: var(--muted); }
+.cal .m-d.today { background: var(--card); }
+.cal .m-n { align-self: flex-start; font: 600 22px/1.15 var(--sign); }
+.cal .m-d.today .m-n { padding: 0 6px; background: var(--plate); color: var(--chalk); border-radius: 4px; }
+.cal .m-l { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font: 500 16px/1.25 var(--sign); }
+.cal .m-l.ex { padding: 0 5px; margin-bottom: 2px; background: var(--slab); color: var(--slab-ink); border-radius: 3px; font-weight: 600; }
+.cal .m-l.one { color: var(--ink); font-weight: 600; }
+.cal .m-l.q { color: var(--muted); }
+.cal .m-l.tkm::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 4px; border: 2px solid var(--tickbox); border-radius: 2px; }
+.cal .m-l.tkm.over { color: var(--alert); font-weight: 600; }
+.cal .m-l.tkm.over::before { border-color: var(--alert); }
+/* on a phone the month has marks only, and the chosen day is listed below it */
+.cal .mm .m-d { min-height: 54px; padding: 3px 2px; text-align: center; }
+.cal .mm .m-n { font-size: 20px; align-self: center; }
+.cal .mm .m-d.sel { box-shadow: inset 0 0 0 2px var(--ink); }
+.cal .marks { display: flex; justify-content: center; gap: 3px; height: 10px; margin-top: 2px; }
+.cal .marks i { width: 9px; height: 9px; border-radius: 2px; }
+.cal .marks .cl { height: 4px; margin-top: 3px; width: 12px; background: var(--seg); }
+.cal .marks .ex { width: 16px; background: var(--slab); }
+.cal .marks .tk2 { border: 2px solid var(--tickbox); }
+.cal .marks .ov { border: 2px solid var(--alert); }
+#calpick { margin-top: 4px; }
+
+/* Week: days run down, time runs across, and the clock is one line through all seven days */
+.cal .wkl { position: relative; --lw: 46px; }
+.cal .l-scale { position: relative; height: 22px; margin-left: var(--lw); }
+.cal .l-scale span { position: absolute; font: 500 16px/22px var(--sign); color: var(--muted); padding-left: 3px; }
+.cal .l-row { display: grid; grid-template-columns: var(--lw) minmax(0, 1fr); border-top: 1px solid var(--line); }
+.cal .l-row.today { background: var(--card); }
+.cal .l-day { width: 100%; align-self: stretch; padding: 5px 6px; font: 500 17px/1.1 var(--sign); color: var(--muted); }
+.cal .l-day b { display: block; font: 600 23px/1.05 var(--sign); color: var(--ink); }
+.cal .l-lane { position: relative; height: var(--lh); margin: 4px 0; background-image: linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: calc(100% / 12) 100%; }
+.cal .l-row.quiet .l-lane { height: 26px; margin: 3px 0; }
+.cal .l-row.quiet .l-day { display: flex; gap: 6px; align-items: baseline; padding-block: 2px; }
+.cal .l-row.quiet .l-day b { font-size: 20px; }
+.cal .l-due { position: relative; z-index: 4; grid-column: 2; display: flex; flex-wrap: wrap; gap: 0 14px; padding: 0 2px 4px; }
+.cal .l-due .tk { max-width: 100%; padding-right: 6px; background: var(--paper); }
+.cal .l-row.today .l-due .tk { background: var(--card); }
+.cal .l-hol { position: absolute; inset: 0; display: flex; align-items: center; padding-left: 8px; font: 600 17px/1 var(--sign); color: var(--muted); }
+.cal .l-nowl { position: absolute; z-index: 3; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--ink); }
+.cal .w-now { position: absolute; z-index: 3; top: 22px; bottom: 0; width: 2px; margin-left: -1px; background: var(--ink); pointer-events: none; }
+.cal .w-now b { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); padding: 0 5px; background: var(--ink); color: var(--paper); font: 600 17px/21px var(--sign); border-radius: 3px; }
+
+/* rows without a time scale: the chosen day under the phone month, and the Tasks beside Focus */
+.cal .b-h { display: flex; align-items: baseline; gap: 8px; padding: 14px 0 5px; border-bottom: 2px solid var(--ink); font: 600 23px/1.1 var(--sign); }
+.cal .b-h small { font: 500 18px/1 var(--sign); color: var(--muted); }
+.cal .b-h.past { border-color: var(--line); color: var(--muted); }
+.cal .b-h .rel { margin-left: auto; font: 600 18px/1 var(--sign); color: var(--ink); }
+.cal .b-row { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 2px 10px; width: 100%; align-items: baseline; padding: 7px 0 8px; border-bottom: 1px solid var(--line); }
+.cal .b-row:hover { background: var(--press); }
+.cal .b-t { font: 600 20px/1.15 var(--sign); }
+.cal .b-t small { display: block; font: 500 16px/1.1 var(--sign); color: var(--muted); }
+.cal .b-m { min-width: 0; }
+.cal .b-m b { font: 600 22px/1.15 var(--sign); margin-right: 8px; }
+.cal .b-m em { font-style: normal; font-weight: 500; }
+.cal .b-m span { display: block; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal .b-m span b { font: 600 18px/1 var(--sign); color: var(--ink); margin-right: 3px; }
+.cal .b-row.past .b-t, .cal .b-row.past .b-m b, .cal .b-row.past .b-m em, .cal .b-row.past .b-m span b { color: var(--muted); }
+.cal .b-row.cx .b-m > b { text-decoration: line-through; }
+.cal .chip { margin-left: 0; align-self: auto; padding: 0 7px; font: 600 19px/25px var(--sign); border-radius: 3px; background: var(--yellow); color: var(--on-yellow); box-shadow: inset 0 0 0 1.5px var(--live-edge); }
+.cal .word { font: 600 18px/1 var(--sign); color: var(--muted); }
+.cal .b-row.exam { padding: 9px 10px 10px; border: 0; background: var(--slab); color: var(--slab-ink); border-radius: var(--r); margin: 5px 0; }
+.cal .b-row.exam:hover { background: var(--slab); }
+.cal .b-row.exam .b-t small, .cal .b-row.exam .b-m span { color: var(--slab-muted); }
+.cal .b-row.exam .b-m span b, .cal .b-row.exam .word { color: var(--slab-ink); }
+.cal .b-tk { display: flex; align-items: center; gap: 6px; padding: 5px 0; border-bottom: 1px solid var(--line); min-height: 44px; }
+.cal .b-tk .tk { flex: 1; }
+.cal .b-tk .sub { font: 600 18px/1 var(--sign); color: var(--muted); }
+.cal .b-none { padding: 10px 0; color: var(--muted); }
+.cal .sidehead { font: 600 21px/1.1 var(--sign); padding-bottom: 4px; }
+
+/* Day: Focus. The lane zooms to the hours the day uses and acts as a picker. */
+.cal .d-lane { margin: 2px 0 6px; }
+.cal .d-gap { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font: 500 17px/1 var(--sign); color: var(--muted); white-space: nowrap; }
+.cal .d-sub { margin-top: 14px; }
+.cal .f { display: grid; gap: 14px; margin-top: 12px; }
+.cal .f-c { padding: 12px 16px 14px; background: var(--card); border-radius: var(--r); box-shadow: inset 0 0 0 1px var(--line); }
+.cal .f-c.ex { background: var(--slab); color: var(--slab-ink); box-shadow: none; }
+.cal .f-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; font: 600 21px/1.2 var(--sign); }
+.cal .f-room { font: 600 52px/1.05 var(--sign); margin-top: 4px; }
+.cal .f-sub { font-weight: 500; }
+.cal .f-sub b { font: 600 19px/1 var(--sign); margin-right: 3px; }
+.cal .f-more { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); }
+.cal .f-c.ex .f-more { border-color: var(--slab-muted); color: var(--slab-muted); }
+
+/* the little calendar: the date title opens it. A sheet on a phone, a panel under the title on a desktop. */
+.cal .jt { display: block; padding: 2px 8px 3px; margin: -2px -8px -3px; border-radius: var(--r); font: inherit; }
+.cal .jt:hover, .cal .jt[aria-expanded=true] { background: var(--press); }
+.cal .jt i { font-style: normal; font-size: 19px; color: var(--muted); margin-left: 5px; }
+#jscrim { position: fixed; z-index: 20; inset: 0; background: #000; opacity: 0; visibility: hidden; transition: opacity calc(var(--t-sheet-out) * var(--s-drawer)) linear, visibility 0s calc(var(--t-sheet-out) * var(--s-drawer)); }
+#caljump.open #jscrim { opacity: .45; visibility: visible; transition: opacity calc(var(--t-sheet-in) * var(--s-drawer)) linear; }
+#jump { position: fixed; z-index: 21; left: 0; right: 0; bottom: 0; padding: 12px 12px max(14px, env(safe-area-inset-bottom)); background: var(--sheet); color: var(--ink); border-radius: 12px 12px 0 0; box-shadow: 0 -1px 0 var(--plate); transform: translateY(100%); visibility: hidden; transition: transform calc(var(--t-sheet-out) * var(--s-drawer)) var(--e-drawer), visibility 0s calc(var(--t-sheet-out) * var(--s-drawer)); }
+#caljump.open #jump { transform: none; visibility: visible; transition: transform calc(var(--t-sheet-in) * var(--s-drawer)) var(--e-drawer); }
+#jump:focus-visible { outline: none; }
+.cal .j-y { display: flex; align-items: center; justify-content: space-between; }
+.cal .j-y b { font: 600 28px/1 var(--sign); }
+.cal .j-ms { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; margin: 6px 0 8px; }
+.cal .j-ms button { height: 38px; border-radius: 4px; text-align: center; font: 600 18px/1 var(--sign); color: var(--muted); }
+.cal .j-ms button:hover { background: var(--press); }
+.cal .j-ms button.cur { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.cal .j-ms button[aria-pressed=true] { background: var(--ink); color: var(--paper); text-decoration: none; }
+.cal .jr { display: grid; grid-template-columns: 38px repeat(7, minmax(0, 1fr)); border-radius: 4px; }
+.cal .jr.jh { font: 600 17px/24px var(--sign); color: var(--muted); text-align: center; }
+.cal .jr.on { background: var(--line); }
+.cal [data-view=week] .jr:not(.jh):hover { background: var(--press); }
+.cal .jr button { height: 44px; display: grid; justify-items: center; align-content: center; border-radius: 4px; font: 600 20px/1 var(--sign); text-align: center; }
+.cal .jr button:hover { box-shadow: inset 0 0 0 1.5px var(--box); }
+.cal .jr .jw { font: 500 17px/1 var(--sign); color: var(--muted); }
+.cal .jr .out { color: var(--muted); font-weight: 500; }
+.cal .jr .tod span:first-child { padding: 0 5px; background: var(--plate); color: var(--chalk); border-radius: 3px; }
+.cal .jr button[aria-pressed=true] { background: var(--ink); color: var(--paper); }
+.cal .jr .marks { height: 7px; margin-top: 1px; }
+.cal .jr .marks i { height: 3px; width: 12px; margin-top: 2px; background: currentColor; }
+.cal .j-f { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; color: var(--muted); }
+.cal .j-f button { height: 44px; padding: 0 12px; border-radius: var(--r); font: 600 19px/1 var(--sign); color: var(--ink); background: var(--press); }
+
+@media (max-width: 899.98px) {
+  .cal .ctl { margin-left: 0; width: 100%; }
+  .cal .seg { flex: 1; }
+  .cal .l-lane .e { display: flex; align-items: center; padding: 3px 3px; }
+  .cal .l-lane .e span { text-overflow: clip; }
+  .cal .d-lane .e { display: block; }
+}
+@media (min-width: 900px) {
+  .cal .wkl { --lw: 64px; }
+  .cal .f { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 28px; }
+  #jscrim, #caljump.open #jscrim { opacity: 0; }
+  #jump { right: auto; bottom: auto; width: 372px; padding: 10px 12px 12px; border-radius: var(--r); box-shadow: 0 0 0 1px var(--line), 0 12px 32px rgb(0 0 0 / .35); transform: translateY(-6px); opacity: 0; transition: transform calc(var(--t-add-out) * var(--s-add)) ease-out, opacity calc(var(--t-add-out) * var(--s-add)) linear, visibility 0s calc(var(--t-add-out) * var(--s-add)); }
+  #caljump.open #jump { opacity: 1; transition: transform calc(var(--t-add-in) * var(--s-add)) var(--e-add), opacity calc(var(--t-add-in) * var(--s-add)) linear; }
+}
 
 /* lists that lead somewhere */
 .srow, .nrow, .irow { display: grid; width: 100%; min-height: 64px; padding: 9px 4px; gap: 1px; text-align: left; border-bottom: 1px solid var(--line); }
@@ -728,17 +861,17 @@ main { overflow-x: clip; }
     <p class="proto">Theme: <button type="button" data-pick="auto">System</button><button type="button" data-pick="oled-leaf">Black</button><button type="button" data-pick="white-leaf">Light</button></p>
       </div>
 
-      <div class="view" id="v-calendar" hidden>
-        <header class="top"><h1>Calendar</h1></header>
-        <div class="pad">
-          <div class="calbar">
-            <span class="span" id="calspan"></span>
-            <button class="step" id="calprev" type="button" aria-label="Previous">‹</button>
-            <button class="step" id="calnext" type="button" aria-label="Next">›</button>
+      <div class="view cal" id="v-calendar" hidden>
+        <header class="ctop">
+          <h1><button class="jt" id="caltitle" type="button" aria-haspopup="dialog" aria-expanded="false"><span id="calspan"></span><i aria-hidden="true">▾</i><small id="calsem"></small></button></h1>
+          <div class="ctl">
+            <button class="cnav" id="calprev" type="button" aria-label="Earlier">‹</button>
+            <button class="cnav" id="calnext" type="button" aria-label="Later">›</button>
+            <button class="chome" id="calhome" type="button" hidden>Today</button>
             <div class="seg" id="calmode"><i class="seg-thumb"></i><button type="button" data-mode="day" aria-pressed="false">Day</button><button type="button" data-mode="week" aria-pressed="true">Week</button><button type="button" data-mode="month" aria-pressed="false">Month</button></div>
           </div>
-          <div id="calbody"></div>
-        </div>
+        </header>
+        <div id="calbody"></div>
       </div>
 
       <div class="view" id="v-subjects" hidden>
@@ -789,6 +922,8 @@ main { overflow-x: clip; }
 
 <div class="scrim" id="scrim"></div>
 <section class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dr-title" tabindex="-1"><div class="grip" id="grip"><i></i></div><div id="dr-body"></div></section>
+
+<div class="cal" id="caljump"><div id="jscrim" data-jclose></div><aside id="jump" role="dialog" aria-label="Go to a date" tabindex="-1"></aside></div>
 
 <p class="vh" id="say" role="status"></p>
 
@@ -1210,6 +1345,7 @@ main { overflow-x: clip; }
   function show(to, o) {
     o = o || {};
     stopNav();
+    CAL.closeJump();
     if (to === cur) return;
     var from = views[cur], next = views[to], y = scrollY, kind = o.kind || 'tab';
     var src = o.src ? measure(o.src) : null;
@@ -1218,7 +1354,7 @@ main { overflow-x: clip; }
     scrolls[cur] = y; cur = to;
     next.hidden = false;
     if (to === 'today') fit();
-    if (to === 'calendar') { placeThumb($('.seg-thumb'), $('#calmode [aria-pressed=true]'), true); placeSel(true); }
+    if (to === 'calendar') placeThumb($('.seg-thumb'), $('#calmode [aria-pressed=true]'), true);
     if (to === 'subject') placeThumb($('.stab-ind'), $('.stabs [aria-selected=true]'), true);
     var ny = kind === 'push' ? 0 : (scrolls[to] || 0);
     placeInds(!!o.instant);
@@ -1296,117 +1432,344 @@ main { overflow-x: clip; }
     if (dir !== null) arrive(el, dir);
   }
 
-  /* calendar */
-  var THU = new Date(2026, 10, 5), anchor = new Date(2026, 10, 5), calMode = 'week', daySel = 0;
-  var WK = [
-    [[600, 690, 'BI-ZUM', 'Lecture', 'TH:A-1242']],
-    [[555, 645, 'BI-AAG', 'Tutorial', 'T9:301'], [780, 870, 'BI-SP1', 'Lab', 'T9:105']],
-    [[660, 750, 'BI-OSY', 'Lab', 'T9:350']],
-    [[555, 645, 'BI-OSY', 'Lecture', 'TH:A-1242'], [660, 750, 'BI-PSI', 'Lab', 'T9:350'], [870, 960, 'BI-AAG', 'Lecture', 'TH:A-1442'], [975, 1020, 'BI-SP1', 'Project presentation', 'T9:105']],
-    [], [], []
-  ];
-  var EXAM = [540, 630, 'BI-ZUM', 'Midterm exam', 'TH:A-1242'];
-  function same(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
-  function plus(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
-  function eventsOn(d) {
-    var e = WK[(d.getDay() + 6) % 7].slice();
-    if (same(d, new Date(2026, 10, 6))) e.push(EXAM);
-    return e.sort(function (a, b) { return a[0] - b[0]; });
-  }
-  function stateOf(d, e) {
-    if (e[3] === 'Midterm exam') return 'exam';
-    if (d < THU && !same(d, THU)) return 'past';
-    if (!same(d, THU)) return '';
-    var at = DAY[step].at;
-    return e[1] <= at ? 'past' : e[0] <= at ? 'live' : '';
-  }
-  function fmt(d, o) { return d.toLocaleDateString('en-GB', o); }
-  function monday() { return plus(anchor, -((anchor.getDay() + 6) % 7)); }
-  function marks(ev) { return '<span class="k-marks">' + ev.slice(0, 4).map(function (e) { return '<em' + (e[3] === 'Midterm exam' ? ' class="x"' : '') + '></em>'; }).join('') + '</span>'; }
-  function gapsOf(ev) {
-    var g = [];
-    for (var i = 0; i + 1 < ev.length; i++) if (ev[i + 1][0] - ev[i][1] >= 90) g.push([ev[i][1], ev[i + 1][0], i]);
-    return g;
-  }
-  function span(e) { return ' style="--from:' + e[0] + ';--to:' + e[1] + '"'; }
+  /* calendar: the look and structure are the ones chosen in prototypes/calendar-dashboard (Week rotated, Day Focus,
+     Month Grid, the little calendar), carried over with the same sample data. Only the motion is this prototype's. */
+  var CAL = (function () {
+    /* dates, all plain strings so no time zone can interfere */
+    const pad = n => String(n).padStart(2, '0');
+    const D = s => new Date(s + 'T00:00:00Z');
+    const iso = d => d.toISOString().slice(0, 10);
+    const add = (s, n) => { const d = D(s); d.setUTCDate(d.getUTCDate() + n); return iso(d); };
+    const dow = s => (D(s).getUTCDay() + 6) % 7;
+    const mon = s => add(s, -dow(s));
+    const hm = m => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
+    const dayN = s => D(s).getUTCDate();
+    const WD = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const MN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const mName = s => MN[D(s).getUTCMonth()];
+    const diff = (a, b) => Math.round((D(b) - D(a)) / 864e5);
+    const SEM0 = '2026-09-21';
+    const teachWeek = s => Math.floor(diff(SEM0, s) / 7) + 1;
 
-  function scaleHtml() { return '<div class="k1-scale">' + [540, 660, 780, 900].map(function (a) { return '<span style="--at:' + a + '">' + hhmm(a) + '</span>'; }).join('') + '</div>'; }
-  function weekHtml() {
-    var mon = monday(), out = '', has = false;
-    for (var i = 0; i < 7; i++) {
-      var d = plus(mon, i), today = same(d, THU), ev = eventsOn(d); has = has || today;
-      out += '<button class="k1-row' + (today ? ' today' : '') + (ev.length ? '' : ' empty') + '" type="button" data-day="' + d.getTime() + '"><span class="k1-day"><b>' + d.getDate() + '</b>' + fmt(d, { weekday: 'short' }) + '</span><span class="k1-lane">' +
-        ev.map(function (e) { return '<span class="k1-bar ' + stateOf(d, e) + '"' + span(e) + '>' + e[2] + '<small>' + hhmm(e[0]) + '</small></span>'; }).join('') +
-        (ev.length ? '' : '<em>Free</em>') + (today ? '<i class="k1-line"></i><i class="k1-tag">' + clock + '</i>' : '') + '</span></button>';
-    }
-    return scaleHtml() + '<div class="k1-wk">' + out + (has ? '<i class="k1-now"></i>' : '') + '</div>';
-  }
-  function cardHtml(e) {
-    return '<p class="kick">' + (stateOf(anchor, e) === 'live' ? '<i class="k-now">Now</i>' : '') + e[3] + ', ' + hhmm(e[0]) + ' to ' + hhmm(e[1]) + '</p><h3>' + e[2] + '<span>' + SUBJ[e[2]].name + '</span></h3><span class="where">' + e[4] + '</span>';
-  }
-  function dayHtml() {
-    var ev = eventsOn(anchor);
-    if (!ev.length) return '<p class="none">No Events on this day</p>';
-    daySel = Math.min(daySel, ev.length - 1);
-    return '<div class="k1-dayview">' + scaleHtml() + '<div class="k1-focus"><div class="k1-lane">' +
-      ev.map(function (e, i) { return '<button class="fblock k1-bar ' + stateOf(anchor, e) + '" type="button" data-sel="' + i + '"' + span(e) + '>' + e[2] + '<small>' + hhmm(e[0]) + '</small></button>'; }).join('') +
-      gapsOf(ev).map(function (g) { return '<span class="k1-gap"' + span(g) + '>Free</span>'; }).join('') +
-      '<i class="fsel"></i></div></div><div class="dcard scard" id="dcard">' + cardHtml(ev[daySel]) + '</div></div>';
-  }
-  function eachDay(fn) {
-    var first = new Date(anchor.getFullYear(), anchor.getMonth(), 1), lead = (first.getDay() + 6) % 7, days = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0).getDate();
-    var h = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(function (x) { return '<span class="h">' + x + '</span>'; }).join('');
-    for (var i = 0; i < lead; i++) h += '<span></span>';
-    for (var n = 1; n <= days; n++) {
-      var d = new Date(anchor.getFullYear(), anchor.getMonth(), n), ev = eventsOn(d);
-      h += fn(d, n, ev, ev.filter(function (e) { return e[3] === 'Midterm exam'; })[0]);
-    }
-    return h;
-  }
-  function monthHtml() {
-    return '<div class="k1-mon">' + eachDay(function (d, n, ev, exam) {
-      return '<button type="button" class="k1-tile' + (same(d, THU) ? ' today' : '') + (exam ? ' exam' : '') + '" data-day="' + d.getTime() + '"><i>' + n + '</i>' + (ev.length ? marks(ev) + '<small>' + (exam ? 'Exam' : ev.length + (ev.length > 1 ? ' classes' : ' class')) + '</small>' : '') + '</button>';
-    }) + '</div>';
-  }
+    /* sample data, invented but shaped like a real FIT week */
+    const SUB = { 'BI-OSY': 'Operační systémy', 'BI-PSI': 'Počítačové sítě', 'BI-AAG': 'Automaty a gramatiky', 'BI-SP1': 'Softwarový projekt 1', 'BI-ZUM': 'Základy umělé inteligence' };
+    const HOL = { '2026-09-28': 'Statehood Day', '2026-10-28': 'Independence Day', '2026-11-17': 'Freedom Day' };
+    const PATTERN = [
+      [0, 555, 645, 'BI-AAG', 'Tutorial', 'T9:301'], [0, 765, 855, 'BI-ZUM', 'Lecture', 'TH:A-1242'],
+      [1, 555, 645, 'BI-ZUM', 'Lab', 'T9:348'], [1, 870, 960, 'BI-OSY', 'Lab', 'T9:350'],
+      [2, 660, 750, 'BI-PSI', 'Lecture', 'TH:A-1442'], [2, 975, 1065, 'BI-AAG', 'Tutorial', 'T9:302'],
+      [3, 555, 645, 'BI-OSY', 'Lecture', 'TH:A-1242'], [3, 660, 750, 'BI-PSI', 'Lab', 'T9:350'], [3, 870, 960, 'BI-AAG', 'Lecture', 'TH:A-1442'],
+      [4, 780, 870, 'BI-SP1', 'Tutorial', 'T9:105'],
+    ];
+    const EV = [];
+    for (let w = SEM0; w < '2026-12-21'; w = add(w, 7)) PATTERN.forEach(([d, from, to, s, kind, room]) => {
+      const day = add(w, d);
+      if (!HOL[day]) EV.push({ id: 'e' + EV.length, day, from, to, s, kind, room });
+    });
+    const one = o => { const e = { id: 'x' + EV.length, ...o }; EV.push(e); return e; };
+    one({ day: '2026-11-05', from: 975, to: 1020, s: 'BI-SP1', kind: 'Assessment', title: 'Project presentation', room: 'T9:105' });
+    const MID = one({ day: '2026-11-06', from: 540, to: 630, s: 'BI-ZUM', kind: 'Exam', title: 'Midterm exam', room: 'TH:A-1242', exam: true });
+    const FIN = one({ day: '2026-11-18', from: 840, to: 960, s: 'BI-AAG', kind: 'Exam', title: 'Midterm exam', room: 'T9:107', exam: true });
+    one({ day: '2026-11-04', from: 1020, to: 1080, s: 'BI-SP1', kind: 'Course event', title: 'Team meeting', room: 'T9:105' });
+    one({ day: '2026-11-10', from: 1020, to: 1065, kind: 'Own', title: 'Dentist' });
+    one({ day: '2026-11-26', from: 870, to: 960, s: 'BI-SP1', kind: 'Assessment', title: 'Project review', room: 'T9:105' });
+    EV.find(e => e.day === '2026-11-13' && e.s === 'BI-SP1').cancelled = true;
+    const T = [
+      { title: 'Homework 3', s: 'BI-OSY', d: '2026-11-04', t: 1439 },
+      { title: 'Lab report', s: 'BI-PSI', d: '2026-11-05', t: 1439 },
+      { title: 'Finish the slides', s: 'BI-SP1', d: '2026-11-06' },
+      { title: 'Problem set 5', s: 'BI-AAG', d: '2026-11-09' },
+      { title: 'Quiz 4', s: 'BI-ZUM', d: '2026-11-11', t: 1439 },
+      { title: 'Renew library card', d: '2026-11-12' },
+      { title: 'Homework 4', s: 'BI-OSY', d: '2026-11-18', t: 1439 },
+      { title: 'Report draft', s: 'BI-SP1', d: '2026-11-27' },
+      { title: 'Past paper 2024', s: 'BI-ZUM', d: '2026-11-03', prep: MID.id, done: true },
+      { title: 'Search algorithms summary', s: 'BI-ZUM', d: '2026-11-04', prep: MID.id, done: true },
+      { title: 'Go over Lab 6', s: 'BI-ZUM', d: '2026-11-05', prep: MID.id },
+      { title: 'Read chapters 1 to 4', s: 'BI-AAG', d: '2026-11-08', prep: FIN.id, done: true },
+      { title: 'Pumping lemma examples', s: 'BI-AAG', d: '2026-11-12', prep: FIN.id },
+      { title: 'Past paper 2025', s: 'BI-AAG', d: '2026-11-15', prep: FIN.id },
+      { title: 'Ask about question 7', s: 'BI-AAG', d: '2026-11-16', prep: FIN.id },
+    ].map((t, i) => ({ id: 't' + i, ...t }));
 
-  function calSpan() {
-    if (calMode === 'month') return fmt(anchor, { month: 'long', year: 'numeric' });
-    if (calMode === 'day') return fmt(anchor, { weekday: 'long', day: 'numeric', month: 'long' });
-    var mon = monday();
-    return mon.getDate() + ' to ' + fmt(plus(mon, 6), { day: 'numeric', month: 'long' });
-  }
-  function placeSel(instant) {
-    var b = $('.fblock[data-sel="' + daySel + '"]'), s = $('.fsel');
-    if (b && s) placeThumb(s, b, instant);
-  }
-  function renderCal(dir) {
-    $('#calspan').textContent = calSpan();
-    swap($('#calbody'), calMode === 'week' ? weekHtml() : calMode === 'day' ? dayHtml() : monthHtml(), dir === undefined ? null : dir);
-    placeSel(true);
-  }
-  function setMode(m) {
-    calMode = m;
-    $$('#calmode button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.mode === m)); });
-    placeThumb($('.seg-thumb'), $('#calmode [aria-pressed=true]'));
-    renderCal(0);
-  }
-  $$('#calmode button').forEach(function (b) { b.addEventListener('click', function () { setMode(b.dataset.mode); }); });
-  function stepCal(d) {
-    anchor = calMode === 'month' ? new Date(anchor.getFullYear(), anchor.getMonth() + d, 1) : plus(anchor, calMode === 'week' ? 7 * d : d);
-    daySel = 0;
-    renderCal(d);
-  }
-  $('#calprev').addEventListener('click', function () { stepCal(-1); });
-  $('#calnext').addEventListener('click', function () { stepCal(1); });
-  $('#calbody').addEventListener('click', function (e) {
-    var day = e.target.closest('[data-day]'), sel = e.target.closest('[data-sel]');
-    if (day) { anchor = new Date(+day.dataset.day); daySel = 0; setMode('day'); }
-    if (sel) {
-      daySel = +sel.dataset.sel;
-      placeSel();
-      swap($('#dcard'), cardHtml(eventsOn(anchor)[daySel]), 0);
+    /* state. The clock is the plate's, so the calendar follows the same day as Today. */
+    const C = { view: 'week', at: null, pick: null, sel: null, j: null };
+    const now = () => ({ d: '2026-11-05', t: DAY[step].at });
+    const isPh = () => innerWidth < 900;
+    const T0 = 480, T1 = 1200, SPAN = T1 - T0;
+    const dayEv = d => EV.filter(e => e.day === d).sort((a, b) => a.from - b.from);
+    const dayT = d => T.filter(t => t.d === d);
+    const dayTasks = d => dayT(d).filter(t => !t.prep || !t.done);
+    const status = e => { const n = now(); if (e.cancelled) return 'cx'; if (e.day < n.d || (e.day === n.d && e.to <= n.t)) return 'past'; if (e.day === n.d && e.from <= n.t) return 'live'; return 'up'; };
+    const overdue = t => { const n = now(); return !t.done && (t.d < n.d || (t.d === n.d && t.t && t.t < n.t)); };
+    const rel = d => { const k = diff(now().d, d); return k === 0 ? 'Today' : k === 1 ? 'Tomorrow' : k < 0 ? (k === -1 ? 'Yesterday' : -k + ' days ago') : 'In ' + k + ' days'; };
+    const lasts = m => (m >= 60 ? Math.floor(m / 60) + ' h ' : '') + (m % 60 ? m % 60 + ' min' : '');
+    const short = e => e.s ? e.s.replace(/^[A-Z]+-/, '') : e.title;
+    const label = e => e.s || e.title;
+    const kindWord = e => e.title && e.kind !== 'Own' ? e.title : e.kind === 'Own' ? '' : e.kind;
+    const prepOf = e => T.filter(t => t.prep === e.id);
+    const isRoutine = e => !e.title && !e.cancelled;
+
+    /* lay overlapping Events side by side */
+    function pack(list) {
+      const out = list.map(e => ({ e, c: 0, n: 1 }));
+      out.forEach((a, i) => { const hit = out.slice(0, i).filter(b => b.e.to > a.e.from); while (hit.some(b => b.c === a.c)) a.c++; });
+      out.forEach(a => { const g = out.filter(b => b.e.from < a.e.to && b.e.to > a.e.from); a.n = Math.max(...g.map(b => b.c)) + 1; });
+      return out;
     }
-  });
+    const tick = t => `<label class="box"><input type="checkbox" data-tick="${t.id}" aria-label="${t.title}"${t.done ? ' checked' : ''}><b><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></b></label>`;
+    const tk = t => `<span class="tk${t.done ? ' done' : ''}${overdue(t) ? ' over' : ''}">${tick(t)}<button type="button" data-open="t:${t.id}">${t.title}</button></span>`;
+    const alert = '<svg class="i" aria-hidden="true"><use href="#alert"/></svg>';
+
+    /* one Event on a lane. Its kind is the word only: no shape, colour or icon. */
+    function block(e, style, big, half) {
+      const st = status(e), n = now(), ph = isPh();
+      const fill = st === 'live' ? `<i class="fill" style="height:100%;width:${(n.t - e.from) / (e.to - e.from) * 100}%"></i>` : '';
+      let body;
+      if (ph && !big) body = `<span><b>${short(e)}</b></span>`;
+      else if (ph) body = `<span><b>${short(e)}</b></span>` + (e.exam ? '<span>Exam</span>' : e.kind !== 'Own' ? `<span>${e.kind === 'Course event' ? 'Event' : e.kind === 'Assessment' ? 'Assess.' : e.kind}</span>` : '');
+      else body = `<span><b>${label(e)}</b> ${e.cancelled ? 'Cancelled' : e.kind === 'Own' ? '' : kindWord(e)}</span>` + (e.room ? `<span>${e.room}${e.exam && st !== 'past' ? ', ' + rel(e.day) : ''}</span>` : '');
+      return `<button type="button" class="e ${st}${e.exam ? ' exam' : ''}${half ? ' half' : ''}" style="${style}" data-open="e:${e.id}" aria-label="${label(e)} ${e.kind} ${hm(e.from)}">${fill}${body}</button>`;
+    }
+
+    /* Week: days run down the left, time runs across, Tasks sit under their day's lane */
+    function laneRow(d, lh) {
+      const n = now(), evs = dayEv(d), ts = dayTasks(d), quiet = !evs.length && !HOL[d];
+      let inner = HOL[d] ? `<span class="l-hol">${HOL[d]}</span>` : '';
+      pack(evs).forEach(({ e, c, n: m }) => {
+        inner += block(e, `left:${(e.from - T0) / SPAN * 100}%;width:calc(${(e.to - e.from) / SPAN * 100}% - 2px);top:${c / m * 100}%;height:calc(${100 / m}% - ${m > 1 ? 1 : 0}px)`, false, m > 1);
+      });
+      return `<div class="l-row${d === n.d ? ' today' : ''}${quiet ? ' quiet' : ''}" style="--lh:${lh}px"><button type="button" class="l-day" data-day="${d}">${WD[dow(d)].slice(0, 3)}<b>${dayN(d)}</b></button><div class="l-lane">${inner}</div>${ts.length ? `<div class="l-due">${ts.map(tk).join('')}</div>` : ''}</div>`;
+    }
+    function scale(tag) {
+      const ph = isPh(); let h = '<div class="l-scale">';
+      for (let m = T0; m < T1; m += ph ? 120 : 60) if (tag == null || m <= tag - (ph ? 75 : 35) || m >= tag + (ph ? 45 : 15)) h += `<span style="left:${(m - T0) / SPAN * 100}%">${ph ? m / 60 : hm(m)}</span>`;
+      return h + '</div>';
+    }
+    function weekRot(at) {
+      const ph = isPh(), n = now(), w = mon(at), here = n.d >= w && n.d <= add(w, 6) && n.t >= T0 && n.t <= T1;
+      const line = here ? `<i class="w-now" style="left:calc(var(--lw) + (100% - var(--lw)) * ${(n.t - T0) / SPAN})"><b>${hm(n.t)}</b></i>` : '';
+      const lh = ph ? 44 : Math.max(54, Math.min(84, Math.floor((innerHeight - 330) / 5)));
+      return '<div class="wkl">' + scale(here ? n.t : null) + [0, 1, 2, 3, 4, 5, 6].map(i => laneRow(add(w, i), lh)).join('') + line + '</div>';
+    }
+
+    /* rows without a time scale */
+    function bRow(e) {
+      const st = status(e);
+      const right = st === 'live' ? '<span class="chip">Now</span>' : e.cancelled ? '<span class="word">Cancelled</span>' : e.exam && st !== 'past' && diff(now().d, e.day) > 1 ? `<span class="word">${rel(e.day)}</span>` : '';
+      return `<button type="button" class="b-row ${st}${e.exam && st !== 'past' ? ' exam' : ''}" data-open="e:${e.id}"><span class="b-t">${hm(e.from)}<small>${hm(e.to)}</small></span><span class="b-m"><b>${e.room || e.title}</b><em>${e.room ? kindWord(e) : ''}</em>${e.s ? `<span><b>${e.s}</b>${SUB[e.s]}</span>` : ''}</span>${right}</button>`;
+    }
+    const bTask = t => `<div class="b-tk">${tk(t)}${overdue(t) ? `<span class="flag">${alert}Overdue</span>` : t.s ? `<span class="sub">${t.s}</span>` : ''}</div>`;
+    function bDay(d) {
+      const n = now(), evs = dayEv(d), ts = dayTasks(d);
+      let h = `<h2 class="b-h${d < n.d ? ' past' : ''}">${WD[dow(d)]} <small>${dayN(d)} ${mName(d).slice(0, 3)}</small>${d === n.d ? '<span class="rel">Today</span>' : ''}</h2>`;
+      if (HOL[d]) h += `<p class="b-none">${HOL[d]}, no classes</p>`;
+      else if (!evs.length && !ts.length) h += '<p class="b-none">Nothing scheduled</p>';
+      return h + evs.map(bRow).join('') + ts.map(bTask).join('');
+    }
+
+    /* Month: Grid. On a phone the month has marks only and the chosen day is listed below it. */
+    function monthDays(at) {
+      const first = at.slice(0, 8) + '01', start = mon(first), out = [];
+      for (let d = start; ; d = add(d, 1)) { out.push(d); if (out.length % 7 === 0 && add(d, 1).slice(0, 7) > at.slice(0, 7)) break; }
+      return out;
+    }
+    function monthBig(at) {
+      const n = now(), mo = at.slice(0, 7);
+      let h = '<div class="m">' + WD.map(w => `<div class="m-wd">${w.slice(0, 3)}</div>`).join('');
+      monthDays(at).forEach(d => {
+        const evs = dayEv(d), rare = evs.filter(e => !isRoutine(e)), routine = evs.length - rare.length, ts = dayT(d).filter(t => !t.done);
+        let c = `<button type="button" class="m-d${d.slice(0, 7) !== mo ? ' other' : ''}${d === n.d ? ' today' : ''}" data-day="${d}"><span class="m-n">${dayN(d)}</span>`;
+        if (HOL[d]) c += `<span class="m-l q">${HOL[d]}</span>`;
+        rare.forEach(e => c += e.exam ? `<span class="m-l ex">${e.s} Exam</span>` : `<span class="m-l one">${hm(e.from)} ${e.cancelled ? '<s>' + label(e) + '</s>' : e.title}</span>`);
+        ts.slice(0, 2).forEach(t => c += `<span class="m-l tkm${overdue(t) ? ' over' : ''}">${t.title}</span>`);
+        if (ts.length > 2) c += `<span class="m-l q">${ts.length - 2} more due</span>`;
+        if (routine) c += `<span class="m-l q">${routine} ${routine === 1 ? 'class' : 'classes'}</span>`;
+        h += c + '</button>';
+      });
+      return h + '</div>';
+    }
+    function marks(d) {
+      const evs = dayEv(d), ts = dayT(d).filter(t => !t.done);
+      return `<span class="marks">${evs.some(e => e.exam) ? '<i class="ex"></i>' : evs.length ? '<i class="cl"></i>' : ''}${ts.some(overdue) ? '<i class="ov"></i>' : ts.length ? '<i class="tk2"></i>' : ''}</span>`;
+    }
+    function monthSmall(at, sel) {
+      const n = now(), mo = at.slice(0, 7);
+      let h = '<div class="m mm">' + WD.map(w => `<div class="m-wd" style="text-align:center;padding-inline:0">${w.slice(0, 2)}</div>`).join('');
+      monthDays(at).forEach(d => { h += `<button type="button" class="m-d${d.slice(0, 7) !== mo ? ' other' : ''}${d === n.d ? ' today' : ''}${d === sel ? ' sel' : ''}" data-mday="${d}"><span class="m-n">${dayN(d)}</span>${marks(d)}</button>`; });
+      return h + '</div>';
+    }
+
+    /* Day: Focus. The lane zooms to the hours this day uses and acts as a picker. */
+    function zoom(d) {
+      const e = dayEv(d); if (!e.length) return [480, 1080];
+      const lo = Math.floor(Math.min(...e.map(x => x.from)) / 60) * 60; let hi = Math.ceil(Math.max(...e.map(x => x.to)) / 60) * 60;
+      if (hi - lo < 360) hi = lo + 360;
+      return [lo, hi];
+    }
+    function dayLane(d, h, sel) {
+      const [lo, hi] = zoom(d), x = m => (m - lo) / (hi - lo) * 100, n = now(), ph = isPh(), real = dayEv(d).filter(e => !e.cancelled);
+      let ticks = ''; for (let m = lo; m < hi; m += ph && hi - lo > 420 ? 120 : 60) ticks += `<span style="left:${x(m)}%">${ph ? m / 60 : hm(m)}</span>`;
+      let inner = HOL[d] ? `<span class="l-hol">${HOL[d]}</span>` : !real.length ? '<span class="l-hol">No Events</span>' : '';
+      pack(dayEv(d)).forEach(({ e, c, n: m }) => {
+        const st = `left:${x(e.from)}%;width:calc(${x(e.to) - x(e.from)}% - 2px);top:${c / m * 100}%;height:calc(${100 / m}% - ${m > 1 ? 1 : 0}px)`;
+        inner += block(e, st, true, m > 1).replace('class="e ', 'class="e ' + (e.id === sel ? 'sel ' : '')).replace('data-open="e:', 'data-sel="');
+      });
+      real.forEach((e, i) => { const f = real[i + 1]; if (f && f.from - e.to >= 90) inner += `<span class="d-gap" style="left:${x(e.to)}%;width:${x(f.from) - x(e.to)}%">${lasts(f.from - e.to)} free</span>`; });
+      if (d === n.d && n.t >= lo && n.t <= hi) inner += `<i class="l-nowl" style="left:${x(n.t)}%"></i>`;
+      return `<div class="l-scale" style="margin-left:0">${ticks}</div><div class="l-lane d-lane" style="height:${h}px;background-size:${6000 / (hi - lo)}% 100%">${inner}</div>`;
+    }
+    function picked(d) {
+      const evs = dayEv(d);
+      return evs.find(e => e.id === C.sel) || evs.find(e => status(e) === 'live') || evs.find(e => status(e) === 'up') || evs[0];
+    }
+    /* what sits under the lane: the picked Event in a card, the next one like it, and that Subject's Tasks */
+    function focusBody(d) {
+      const n = now(), sel = picked(d);
+      if (!sel) return '<div class="d-sub">' + dayTasks(d).map(bTask).join('') + '</div>';
+      const st = status(sel), when = st === 'live' ? '<span class="chip">Now</span>' : st === 'past' ? 'Finished' : st === 'cx' ? 'Cancelled' : sel.day === n.d ? 'In ' + lasts(sel.from - n.t) : rel(sel.day);
+      const mine = sel.s ? T.filter(t => t.s === sel.s && !t.done).sort((a, b) => a.d.localeCompare(b.d)).slice(0, 3) : [];
+      const other = dayTasks(d).filter(t => !mine.includes(t) && !t.done), again = sel.title ? null : EV.find(e => e.s === sel.s && e.kind === sel.kind && !e.title && e.day > sel.day);
+      const p = prepOf(sel), more = t => '<p class="f-more">' + t + '</p>';
+      const card = '<section class="f-c' + (sel.exam && st !== 'past' ? ' ex' : '') + '"><div class="f-top"><span>' + hm(sel.from) + ' to ' + hm(sel.to) + '</span><span>' + when + '</span></div><div class="f-room">' + (sel.room || sel.title) + '</div><p class="f-sub">' + (sel.room ? kindWord(sel) : '') + '</p>'
+        + (sel.s ? '<p class="f-sub"><b>' + sel.s + '</b> ' + SUB[sel.s] + '</p>' : '')
+        + (st === 'live' ? more((sel.to - n.t) + ' min left') : '')
+        + (again ? more('Next ' + sel.kind + ': ' + WD[dow(again.day)] + ' ' + dayN(again.day) + ' ' + mName(again.day).slice(0, 3) + ', ' + again.room) : '')
+        + (p.length ? more('Prep ' + p.filter(t => t.done).length + ' of ' + p.length) : '') + '</section>';
+      const side = '<div>' + (mine.length ? '<h2 class="sidehead">Tasks for ' + sel.s + '</h2>' + mine.map(bTask).join('') : '')
+        + (other.length ? '<h2 class="sidehead" style="margin-top:14px">Also due this day</h2>' + other.map(bTask).join('') : '')
+        + (mine.length || other.length ? '' : '<p class="b-none">Nothing due</p>') + '</div>';
+      return '<div class="f">' + card + side + '</div>';
+    }
+    function dayFocus(d) {
+      const sel = picked(d);
+      return dayLane(d, isPh() ? 84 : 96, sel && sel.id) + '<div id="calfocus">' + focusBody(d) + '</div>';
+    }
+    const semLine = d => d >= SEM0 && d <= '2026-12-20' ? 'B261, teaching week ' + teachWeek(d) : 'Outside B261';
+
+    /* the little calendar: any date, with teaching week numbers and a mark on exam days */
+    function jumpHtml() {
+      const n = now(), at = C.at || n.d, ym = C.j, y = +ym.slice(0, 4), v = C.view;
+      const months = MN.map((name, i) => { const k = y + '-' + pad(i + 1); return '<button type="button" data-jm="' + k + '" aria-pressed="' + (v === 'month' ? k === at.slice(0, 7) : k === ym) + '" class="' + (k === n.d.slice(0, 7) ? 'cur' : '') + '">' + name.slice(0, 3) + '</button>'; }).join('');
+      let grid = '<div class="jr jh"><span>Wk</span>' + WD.map(w => '<span>' + w.slice(0, 2) + '</span>').join('') + '</div>';
+      const days = monthDays(ym + '-15');
+      for (let i = 0; i < days.length; i += 7) {
+        const row = days.slice(i, i + 7), inSem = row[0] >= SEM0 && row[0] <= '2026-12-20';
+        grid += '<div class="jr' + (v === 'week' && mon(at) === row[0] ? ' on' : '') + '"><button type="button" class="jw" data-jw="' + row[0] + '" aria-label="Open the week of ' + dayN(row[0]) + ' ' + mName(row[0]) + '">' + (inSem ? teachWeek(row[0]) : '·') + '</button>'
+          + row.map(d => '<button type="button" data-jd="' + d + '" class="' + (d.slice(0, 7) !== ym ? 'out ' : '') + (d === n.d ? 'tod' : '') + '" aria-pressed="' + (v === 'day' && d === at) + '"><span>' + dayN(d) + '</span><span class="marks">' + (dayEv(d).some(e => e.exam) ? '<i></i>' : '') + '</span></button>').join('') + '</div>';
+      }
+      const hint = { day: 'Pick a day', week: 'Pick a week, or a day in it', month: 'Pick a month, or a day' }[v];
+      return '<div class="j-y"><button class="cnav" type="button" data-jy="-1" aria-label="Previous year">‹</button><b>' + y + '</b><button class="cnav" type="button" data-jy="1" aria-label="Next year">›</button></div><div class="j-ms">' + months + '</div>' + grid + '<div class="j-f"><span>' + hint + '</span><button type="button" data-jtoday>Today</button></div>';
+    }
+    const jwrap = $('#caljump'), jump = $('#jump'), title = $('#caltitle');
+    function openJump() {
+      C.j = (C.at || now().d).slice(0, 7);
+      jump.dataset.view = C.view;
+      jump.innerHTML = jumpHtml();
+      // on a desktop the panel hangs under the title that opened it
+      var r = title.getBoundingClientRect();
+      jump.style.left = isPh() ? '' : Math.max(8, Math.min(r.left - 8, innerWidth - 380)) + 'px';
+      jump.style.top = isPh() ? '' : r.bottom + 8 + 'px';
+      jwrap.classList.add('open');
+      title.setAttribute('aria-expanded', 'true');
+      jump.focus({ preventScroll: true });
+    }
+    function closeJump() {
+      if (!C.j) return;
+      C.j = null;
+      jwrap.classList.remove('open');
+      title.setAttribute('aria-expanded', 'false');
+      if (jump.contains(document.activeElement)) title.focus({ preventScroll: true });
+    }
+
+    /* the page */
+    function bodyHtml() {
+      const at = C.at || now().d, v = C.view;
+      if (v === 'day') return dayFocus(at);
+      if (v === 'week') return weekRot(at);
+      return isPh() ? monthSmall(at, C.pick || at) + '<div id="calpick">' + bDay(C.pick || at) + '</div>' : monthBig(at);
+    }
+    function head() {
+      const n = now(), at = C.at || n.d, v = C.view, w = mon(at);
+      $('#calspan').textContent = v === 'month' ? `${mName(at)} ${at.slice(0, 4)}` : v === 'day' ? `${WD[dow(at)]} ${dayN(at)} ${mName(at)}` : `${dayN(w)} to ${dayN(add(w, 6))} ${mName(add(w, 6))}`;
+      $('#calsem').textContent = semLine(at);
+      $('#calhome').hidden = v === 'month' ? at.slice(0, 7) === n.d.slice(0, 7) : v === 'day' ? at === n.d : w === mon(n.d);
+      $$('#calmode button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === v)));
+    }
+    // dir: 1 or -1 shifts the content along the arrows, 0 lifts it into place, and none at all follows the clock with no animation
+    function render(dir) {
+      head();
+      swap($('#calbody'), bodyHtml(), dir === undefined ? null : dir);
+      if (!views.calendar.hidden) placeThumb($('.seg-thumb'), $('#calmode [aria-pressed=true]'), dir === undefined);
+    }
+    function stepBy(k) {
+      const at = C.at || now().d;
+      if (C.view === 'month') { const d = D(at.slice(0, 8) + '15'); d.setUTCMonth(d.getUTCMonth() + k); C.at = iso(d); }
+      else C.at = add(at, k * (C.view === 'day' ? 1 : 7));
+      C.pick = null; C.sel = null;
+      render(k);
+    }
+    function openItem(ref) {
+      const id = ref.slice(2), when = d => `${WD[dow(d)]} ${dayN(d)} ${mName(d)}`;
+      if (ref[0] === 'e') {
+        const e = EV.find(x => x.id === id);
+        detail(e.cancelled ? 'Cancelled' : e.kind === 'Own' ? 'Event' : e.kind, e.title || e.s + ' ' + e.kind, `${when(e.day)}, ${hm(e.from)} to ${hm(e.to)}${e.room ? ', ' + e.room : ''}`, e.s);
+      } else {
+        const t = T.find(x => x.id === id);
+        detail('Task', t.title, `Due ${when(t.d)}${t.t ? ', ' + hm(t.t) : ''}`, t.s);
+      }
+    }
+    $('#calprev').addEventListener('click', () => stepBy(-1));
+    $('#calnext').addEventListener('click', () => stepBy(1));
+    $('#calhome').addEventListener('click', () => { C.at = null; C.pick = null; C.sel = null; render(0); });
+    $$('#calmode button').forEach(b => b.addEventListener('click', () => { if (C.view === b.dataset.mode) return; C.view = b.dataset.mode; C.pick = null; render(0); }));
+    title.addEventListener('click', openJump);
+    $('#calbody').addEventListener('click', ev => {
+      const t = ev.target.closest('[data-sel],[data-open],[data-day],[data-mday]');
+      if (!t) return;
+      const d = t.dataset, at = C.at || now().d;
+      if (d.sel) {
+        if (picked(at).id === d.sel) return;
+        C.sel = d.sel;
+        $$('#calbody .d-lane .e').forEach(b => b.classList.toggle('sel', b === t));
+        swap($('#calfocus'), focusBody(at), 0);
+      } else if (d.open) openItem(d.open);
+      else if (d.day) { C.at = d.day; C.view = 'day'; C.pick = null; C.sel = null; scrollTo(0, 0); render(0); }
+      else if (d.mday !== (C.pick || at)) {
+        C.pick = d.mday;
+        $$('#calbody .mm .m-d').forEach(b => b.classList.toggle('sel', b === t));
+        swap($('#calpick'), bDay(d.mday), 0);
+      }
+    });
+    $('#calbody').addEventListener('change', ev => {
+      const id = ev.target.dataset.tick; if (!id) return;
+      T.find(t => t.id === id).done = ev.target.checked;
+      render();
+    });
+    jwrap.addEventListener('click', ev => {
+      const t = ev.target.closest('[data-jclose],[data-jy],[data-jm],[data-jd],[data-jw],[data-jtoday]');
+      if (!t) return;
+      const d = t.dataset;
+      if ('jclose' in d) { closeJump(); return; }
+      // the year arrows, and a month while a day or week is being picked, only turn the little calendar's page
+      if (d.jy || (d.jm && C.view !== 'month')) {
+        C.j = d.jy ? (+C.j.slice(0, 4) + +d.jy) + C.j.slice(4) : d.jm;
+        jump.innerHTML = jumpHtml();
+        jump.focus({ preventScroll: true });
+        return;
+      }
+      if (d.jm) C.at = d.jm + '-01';
+      else if (d.jd) { C.at = d.jd; if (C.view === 'month') C.view = 'day'; }
+      else if (d.jw) { C.at = d.jw; C.view = 'week'; }
+      else C.at = null;
+      C.pick = null; C.sel = null;
+      closeJump();
+      scrollTo(0, 0);
+      render(0);
+    });
+    return { render: render, closeJump: closeJump };
+  })();
+  function renderCal() { CAL.render(); }
 
   /* Subjects */
   var SUBJ = {
@@ -1614,7 +1977,7 @@ main { overflow-x: clip; }
   addEventListener('keydown', function (e) {
     if ((e.target.closest && e.target.closest('input, textarea')) || e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key >= '1' && e.key <= '4') show(ORDER[+e.key - 1], { instant: true });
-    if (e.key === 'Escape') closeDrawer();
+    if (e.key === 'Escape') { closeDrawer(); CAL.closeJump(); }
     if (e.key.toLowerCase() === 'c' && !menu.matches(':popover-open')) {
       root.classList.add('instant');
       menu.showPopover();
@@ -1623,7 +1986,8 @@ main { overflow-x: clip; }
   });
   addEventListener('resize', function () {
     placeInds(true);
-    if (!views.calendar.hidden) { placeThumb($('.seg-thumb'), $('#calmode [aria-pressed=true]'), true); placeSel(true); }
+    CAL.closeJump();
+    CAL.render();
     if (!views.subject.hidden) placeThumb($('.stab-ind'), $('.stabs [aria-selected=true]'), true);
   });
   renderSubject('BI-OSY');
