@@ -49,6 +49,7 @@ The owner chose the character "Tichý přístroj" (quiet instrument): short, eas
 | 4 | Cards dealt one after another, then all pages flying at once, then the old page staying put | Did not like any slide; asked for research |
 | 5 | Fade through, shared axis, row grows into page | Agreed |
 | 6 | Add menu joined to its button; calendar looks Rozvrh and Agenda | Rozvrh; sent the final speeds |
+| 7 | The result on the iPhone 14, in the Claude app | Right, apart from an empty band at the top, which was the notch space added twice inside the app's frame |
 
 ## What the build has to carry over
 
@@ -60,7 +61,7 @@ The owner chose the character "Tichý přístroj" (quiet instrument): short, eas
 
 ## Still open
 
-- **Not seen on an iPhone.** The ticket asks for the iPhone 14 as an installed PWA and for Brave on Windows. Every speed was chosen in a desktop browser, and nothing here was run on the phone.
+- **Seen on the iPhone 14 only inside the Claude app.** The owner tuned every speed in a desktop browser, then watched the result on the phone and found it right. It has not been run as an installed PWA or in Brave on Windows.
 - **The six proposed conclusions of the research** (two ADRs, three spec changes, the glossary terms) are not decided.
 - **The now marker** is one of the five key moments and has no motion here.
 - **Calendar arrows** still use a 16 px shift with a fade, unlike the Subject tabs.
