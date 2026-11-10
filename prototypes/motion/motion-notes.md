@@ -37,7 +37,7 @@ The owner chose the character "Tichý přístroj" (quiet instrument): short, eas
 - **Plate:** Next slides up into Now.
 - **Add menu:** grows out of the Add button. The highlight of a row spans the full width, so it meets the button edge to edge.
 
-**Calendar look.** The owner disliked how the calendar looked here and chose "Rozvrh" over a list-based "Agenda". It keeps the structure from the calendar prototype (days down, time across, Focus for Day, a grid for Month) and changes the dress: each day is a panel, an hour scale sits above, today's date sits in a Leaf block, free days are short and say "Free", each bar shows its start time, and Month uses tiles with one mark per Event.
+**Calendar look: not decided here.** The calendar's look and structure are the ones in [`prototypes/calendar-dashboard/`](../calendar-dashboard/calendar-notes.md), and this prototype now shows that calendar. Round 6 gave the calendar a different dress, "Rozvrh". The owner withdrew it in round 8: it contradicted the calendar prototype, and that one is right. Only the motion on the calendar page belongs to this prototype.
 
 ## How it got here
 
@@ -50,6 +50,7 @@ The owner chose the character "Tichý přístroj" (quiet instrument): short, eas
 | 5 | Fade through, shared axis, row grows into page | Agreed |
 | 6 | Add menu joined to its button; calendar looks Rozvrh and Agenda | Rozvrh; sent the final speeds |
 | 7 | The result on the iPhone 14, in the Claude app | Right, apart from an empty band at the top, which was the notch space added twice inside the app's frame |
+| 8 | The Rozvrh calendar replaced by the calendar prototype's: rotated Week, Focus, Grid and the little calendar | Asked for this: Rozvrh was wrong, and everything else here stands |
 
 ## What the build has to carry over
 
@@ -65,11 +66,14 @@ The owner chose the character "Tichý přístroj" (quiet instrument): short, eas
 - **The six proposed conclusions of the research** (two ADRs, three spec changes, the glossary terms) are not decided.
 - **The now marker** is one of the five key moments and has no motion here.
 - **Calendar arrows** still use a 16 px shift with a fade, unlike the Subject tabs.
-- **A 45-minute Event is clipped** in the week on a phone, at about 27 px wide.
+- **The calendar parts added in round 8 have motion the owner has not seen.** The little calendar borrows the Drawer's speeds on a phone and the Add menu's on a desktop, and its pages turn with no animation. Picking an Event in Focus, or a day in the phone Month, swaps the content below at the calendar speed. Ticking a Task in the calendar has no animation.
+- **A quiet weekend day with a two-digit date** ("Sat 14") is wider than its label column in the Week on a phone. The calendar prototype has the same fault.
 - **Not built:** the iOS swipe back, the keyboard with the bottom sheet, and Add → Event, which only switches to Calendar.
 
 ## Checked, and not checked
 
 A script in headless Chrome ran at 390 and 1280 px with no errors and no sideways overflow: dock switches, an interrupted switch, opening and closing a Subject, tab changes, an interrupted tab change, and the three calendar views. While a row opens, the name stays within 4 px of its place in the page and ends on it.
+
+After round 8 a second script ran the calendar alone at 390 and 1280 px, in black and in light, again with no errors, no sideways overflow and no missing values: the three views, picking an Event in Focus, the arrows and Today, picking a day in the phone Month, the little calendar (year arrows, opening a week, Today), ticking a Task, opening an Event in the drawer, and the clock line following the plate from 11:40 to 14:30. The first script was not rerun, and the two calendars were compared only by eye, on the Week, Day and Month screenshots.
 
 The motion itself was judged only by the owner, by eye. Sample items are invented.
